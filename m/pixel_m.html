@@ -1,0 +1,2286 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Pixel M Maker Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0f19;
+            color: #f8fafc;
+            touch-action: manipulation;
+        }
+        .font-pixel {
+            font-family: 'Press Start 2P', monospace;
+        }
+        .btn-retro {
+            transition: all 0.1s ease;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.5);
+        }
+        .btn-retro:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 rgba(0,0,0,0.5);
+        }
+        .tile-active {
+            outline: 3px solid #facc15;
+            outline-offset: 2px;
+            background-color: #334155 !important;
+        }
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        .scrollbar-thin::-webkit-scrollbar {
+            height: 6px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background-color: #475569;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-2 md:p-4 select-none">
+
+    <header class="w-full max-w-6xl flex flex-col md:flex-row items-center justify-between gap-3 mb-2 bg-slate-800/90 p-3 rounded-xl border border-slate-700 shadow-xl backdrop-blur">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center font-pixel text-xl text-white shadow-md border-2 border-red-400">
+                M
+            </div>
+            <div>
+                <h1 class="font-pixel text-xs md:text-sm text-yellow-400 tracking-wider">PIXEL M MAKER <span class="text-red-500"></span></h1>
+                <p class="text-[10px] text-slate-400">つくって、あそぶ！ 8-Bit Pixel Level Builder</p>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+            <button id="btn-mode-play" onclick="setMode('PLAY')" class="btn-retro font-pixel text-[10px] md:text-xs px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg flex items-center gap-1.5 border border-emerald-400">
+                ▶ PLAY (プレイ)
+            </button>
+            <button id="btn-mode-edit" onclick="setMode('EDIT')" class="btn-retro font-pixel text-[10px] md:text-xs px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg flex items-center gap-1.5 border border-indigo-400 ring-2 ring-indigo-300">
+                ✏️ EDIT (つくる)
+            </button>
+
+            <div class="h-6 w-px bg-slate-600 mx-1 hidden sm:block"></div>
+
+            <button onclick="openPublishModal()" class="btn-retro text-xs px-2.5 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg border border-purple-400 flex items-center gap-1 font-bold">🌐 公開</button>
+            <button onclick="openPublicBrowserModal()" class="btn-retro text-xs px-2.5 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-lg border border-teal-400 flex items-center gap-1 font-bold">🌍 みんなのコース <span id="public-badge" class="bg-teal-900 text-teal-200 text-[10px] px-1.5 py-0.5 rounded-full ml-1">0</span></button>
+            <div id="p2p-status-badge" class="text-[10px] px-2 py-1 bg-slate-900 text-slate-400 rounded-lg border border-slate-700 flex items-center gap-1 cursor-pointer" onclick="manualP2pSync()" title="クリックして手動再接続">
+                <span id="p2p-dot" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                <span id="p2p-count-text">P2P: 0 ピア</span>
+            </div>
+
+            <select id="theme-select" onchange="changeTheme(this.value)" class="bg-slate-900 border border-slate-600 text-slate-200 text-xs rounded-lg px-2 py-1.5 focus:ring-yellow-400 focus:border-yellow-400">
+                <option value="overworld">🌲 地上 (Overworld)</option>
+                <option value="underground">地下 (Underground)</option>
+                <option value="castle">🏰 城 (Castle)</option>
+            </select>
+
+            <button onclick="exportLevelPrompt()" class="btn-retro text-xs px-2.5 py-1.5 bg-sky-700 hover:bg-sky-600 text-white rounded-lg border border-sky-500" title="コード出力 (Export)">📤 出力</button>
+            <button onclick="importLevelPrompt()" class="btn-retro text-xs px-2.5 py-1.5 bg-amber-700 hover:bg-amber-600 text-white rounded-lg border border-amber-500" title="コード読込 (Import)">📥 読込</button>
+            <button onclick="saveLevel()" class="btn-retro text-xs px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg border border-slate-500" title="保存">💾 保存</button>
+            <button onclick="clearLevel()" class="btn-retro text-xs px-2.5 py-1.5 bg-rose-700 hover:bg-rose-600 text-white rounded-lg border border-rose-500" title="クリア">🗑️</button>
+        </div>
+    </header>
+
+    <main class="w-full max-w-6xl flex flex-col items-center gap-2">
+
+        <div id="palette-bar" class="w-full bg-slate-800/90 p-2.5 rounded-xl border border-slate-700 shadow-md flex flex-col gap-2">
+            <div class="flex gap-2 border-b border-slate-700 pb-2 overflow-x-auto text-xs font-pixel">
+                <button onclick="setPaletteCategory('terrain')" id="tab-terrain" class="px-3 py-1 bg-slate-700 rounded-t text-yellow-400 border-b-2 border-yellow-400 font-bold">地形・ブロック</button>
+                <button onclick="setPaletteCategory('items')" id="tab-items" class="px-3 py-1 bg-slate-800 rounded-t text-slate-400 hover:text-white">アイテム・仕掛け</button>
+                <button onclick="setPaletteCategory('enemies')" id="tab-enemies" class="px-3 py-1 bg-slate-800 rounded-t text-slate-400 hover:text-white">敵・ギミック</button>
+            </div>
+
+            <div id="palette-container" class="flex items-center gap-2 overflow-x-auto py-1 scrollbar-thin">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+
+        <div class="relative w-full bg-slate-900 rounded-xl overflow-hidden shadow-2xl border-4 border-slate-700 aspect-[2/1] max-h-[70vh]">
+            <canvas id="gameCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+
+            <div id="game-hud" class="absolute top-3 left-4 right-4 flex justify-between items-center font-pixel text-[11px] md:text-xs text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.9)] pointer-events-none hidden">
+                <div class="flex items-center gap-4">
+                    <span id="hud-score">SCORE: 00000</span>
+                    <span id="hud-coins" class="text-yellow-300">🪙 x00</span>
+                    <span id="hud-power" class="text-red-400">M [SMALL]</span>
+                </div>
+                <div id="hud-status" class="text-yellow-400 bg-slate-900/80 px-2.5 py-1 rounded border border-slate-600">PLAYING</div>
+            </div>
+
+            <div id="overlay-msg" class="absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex flex-col items-center justify-center gap-3 hidden z-20">
+                <h2 id="msg-title" class="font-pixel text-xl md:text-2xl text-yellow-400">STAGE CLEAR!</h2>
+                <p id="msg-sub" class="text-slate-300 text-xs md:text-sm">おめでとう！ゴールに到達しました。</p>
+                <button onclick="resetPlayState()" class="btn-retro font-pixel text-xs px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg font-bold">
+                    🔄 リトライ (RETRY)
+                </button>
+            </div>
+        </div>
+
+        <div id="editor-scroll-container" class="w-full bg-slate-800/90 px-3 py-2 rounded-xl border border-slate-700 flex items-center gap-3">
+            <button onclick="scrollEditor(-160)" class="btn-retro text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-bold rounded">◄ 戻る</button>
+            <span class="text-xs text-slate-300 font-pixel whitespace-nowrap">位置: <span id="camera-pos-text">0 / 88</span></span>
+            <input type="range" id="camera-slider" min="0" max="1408" value="0" oninput="onCameraSliderInput(this.value)" class="w-full accent-yellow-400 cursor-pointer">
+            <button onclick="scrollEditor(160)" class="btn-retro text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-bold rounded">進む ►</button>
+        </div>
+
+        <div id="touch-controls" class="w-full flex justify-between items-center gap-4 md:hidden px-2 mt-1">
+            <div class="flex gap-2">
+                <button id="btn-left" class="btn-retro w-12 h-12 bg-slate-700 active:bg-slate-500 text-xl rounded-xl flex items-center justify-center border border-slate-500">◄</button>
+                <button id="btn-right" class="btn-retro w-12 h-12 bg-slate-700 active:bg-slate-500 text-xl rounded-xl flex items-center justify-center border border-slate-500">►</button>
+                <button id="btn-down" class="btn-retro w-12 h-12 bg-slate-700 active:bg-slate-500 text-xl rounded-xl flex items-center justify-center border border-slate-500">▼</button>
+            </div>
+            <div class="flex gap-2">
+                <button id="btn-fire" class="btn-retro w-12 h-12 bg-amber-600 active:bg-amber-500 text-white font-pixel text-[10px] rounded-xl flex items-center justify-center border border-amber-400">FIRE</button>
+                <button id="btn-jump" class="btn-retro w-14 h-12 bg-red-600 active:bg-red-500 text-white font-pixel text-[10px] rounded-xl flex items-center justify-center border border-red-400">JUMP</button>
+            </div>
+        </div>
+
+        <div class="w-full bg-slate-800/50 p-3 rounded-xl border border-slate-700/80 text-[11px] text-slate-300 grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+                <span class="font-pixel text-yellow-400 block mb-1">🎮 基本操作</span>
+                ・移動: <b class="text-white">A / D</b> または <b class="text-white">← / →</b><br>
+                ・しゃがむ / ツタ降り: <b class="text-white">S / ↓</b><br>
+                ・ジャンプ / ツタ登り: <b class="text-white">W / Space / K / ↑</b>
+            </div>
+            <div>
+                <span class="font-pixel text-yellow-400 block mb-1">🔥 特殊アクション</span>
+                ・ファイアボール: <b class="text-white">Shift / J</b> (ファイア時)<br>
+                ・ツタつかまり: ツタ領域で上下移動で登り降り<br>
+                ・Pスイッチ: 踏むとコイン🧱変化！
+            </div>
+            <div>
+                <span class="font-pixel text-yellow-400 block mb-1">🛠️ エディターヒント</span>
+                ・パレットから好きなブロックを選択して配置<br>
+                ・マウスドラッグで連続配置が可能<br>
+                ・超軽量コード(RLE圧縮)でコースを共有！
+            </div>
+        </div>
+    </main>
+
+    <div id="code-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-slate-800 border border-slate-600 rounded-xl p-4 w-full max-w-md flex flex-col gap-3 shadow-2xl">
+            <h3 id="modal-title" class="font-pixel text-sm text-yellow-400">コースコード</h3>
+            <p id="modal-desc" class="text-xs text-slate-300">以下のコードをコピーして保存・共有できます。</p>
+            <textarea id="modal-textarea" class="w-full h-24 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs font-mono text-emerald-400 break-all resize-none focus:outline-none focus:border-yellow-400"></textarea>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeCodeModal()" class="btn-retro text-xs px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg">閉じる</button>
+                <button id="modal-action-btn" onclick="handleModalAction()" class="btn-retro text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold">📋 コピー</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="publish-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-slate-800 border border-slate-600 rounded-xl p-4 w-full max-w-md flex flex-col gap-3 shadow-2xl">
+            <h3 class="font-pixel text-sm text-purple-400 flex items-center gap-2">🌐 コースを公開する</h3>
+            <p class="text-xs text-slate-300">完成したコースをオンライン共有サーバーに登録します。</p>
+            <div class="flex flex-col gap-2 text-xs">
+                <div>
+                    <label class="text-slate-400 block mb-1">コース名:</label>
+                    <input type="text" id="publish-title" placeholder="例: 魔王城の大脱出" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-purple-400">
+                </div>
+                <div>
+                    <label class="text-slate-400 block mb-1">作者名:</label>
+                    <input type="text" id="publish-author" placeholder="例: ゲームファン" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-purple-400">
+                </div>
+            </div>
+            <div id="publish-status" class="text-xs text-yellow-400 hidden">送信中...</div>
+            <div class="flex justify-end gap-2 mt-2">
+                <button onclick="closePublishModal()" class="btn-retro text-xs px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg">キャンセル</button>
+                <button onclick="submitCoursePublish()" class="btn-retro text-xs px-4 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-bold">🚀 公開する</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="public-browser-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-slate-800 border border-slate-600 rounded-xl p-4 w-full max-w-2xl max-h-[85vh] flex flex-col gap-3 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-2">
+                <h3 class="font-pixel text-sm text-teal-300 flex items-center gap-2">🌍 みんなの公開コース一覧</h3>
+                <div class="flex items-center gap-2">
+                    <button onclick="manualP2pSync()" class="btn-retro text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 text-teal-300 rounded border border-slate-600">🔄 同期</button>
+                    <button onclick="closePublicBrowserModal()" class="text-slate-400 hover:text-white font-bold text-sm px-2">✕</button>
+                </div>
+            </div>
+            <p class="text-xs text-slate-400">他プレイヤーが公開したコースです。（最大50個自動受信・入れ替え）</p>
+            
+            <div id="public-courses-list" class="flex flex-col gap-2 overflow-y-auto max-h-[55vh] pr-1">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-msg" class="fixed bottom-6 right-6 bg-slate-800 border-2 border-yellow-400 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 transform transition-all duration-300 translate-y-20 opacity-0 z-50">
+        <span id="toast-icon" class="text-lg">ℹ️</span>
+        <span id="toast-text" class="text-xs font-semibold">メッセージ</span>
+    </div>
+
+    <script src="./blocks.js"></script>
+    <script src="./enemies.js"></script>
+    <script src="./items.js"></script>
+    <script>
+        const GRID_COLS = 120;
+        const GRID_ROWS = 16;
+        const VIEW_COLS = 32;
+        const VIEW_ROWS = 16;
+        const TILE_SIZE = 16; // Internal viewport resolution: 512x256
+
+        let cameraX = 0;
+
+        // 外部コンテンツファイルからタイル定義を読み込みます。
+        const {
+            TILE_EMPTY, TILE_GROUND, TILE_BRICK, TILE_QUESTION, TILE_HARD, TILE_NOTE, TILE_DONUT,
+            TILE_COIN, TILE_PIPE, TILE_VINE, TILE_PSWITCH, TILE_TRAMPOLINE, TILE_SPIKE, TILE_LAVA,
+            TILE_GOOMBA, TILE_KOOPA, TILE_THWOMP, TILE_BOWSER, TILE_START, TILE_GOAL,
+            TILE_MUSHROOM_ITEM, TILE_FIREFLOWER_ITEM, TILE_QUESTION_MUSHROOM, TILE_QUESTION_FIRE, TILE_EMPTY_BLOCK,
+            TILE_DEFS, registerTile, PALETTE_ITEMS
+        } = window.PIXEL_BLOCKS;
+
+        let mode = 'EDIT';
+        let currentCategory = 'terrain';
+        let selectedTile = TILE_GROUND;
+        let currentTheme = 'overworld';
+        let isMouseDown = false;
+        let loadedCourseMeta = null;
+
+        let audioCtx = null;
+
+        function playSound(type) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'jump') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.exponentialRampToValueAtTime(450, now + 0.12);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.linearRampToValueAtTime(0, now + 0.12);
+                    osc.start(now);
+                    osc.stop(now + 0.12);
+                } else if (type === 'coin') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(987, now);
+                    osc.frequency.setValueAtTime(1318, now + 0.08);
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.linearRampToValueAtTime(0, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'stomp') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(120, now);
+                    osc.frequency.exponentialRampToValueAtTime(30, now + 0.1);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                } else if (type === 'powerup') {
+                    osc.type = 'square';
+                    const notes = [330, 392, 659, 523, 587, 784];
+                    notes.forEach((freq, i) => {
+                        osc.frequency.setValueAtTime(freq, now + i * 0.05);
+                    });
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.linearRampToValueAtTime(0, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                } else if (type === 'fireball') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(600, now);
+                    osc.frequency.exponentialRampToValueAtTime(150, now + 0.08);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.linearRampToValueAtTime(0, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'bump') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(100, now);
+                    osc.frequency.linearRampToValueAtTime(60, now + 0.08);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.linearRampToValueAtTime(0, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'win') {
+                    osc.type = 'triangle';
+                    const notes = [261, 329, 392, 523, 659, 784];
+                    notes.forEach((freq, i) => {
+                        osc.frequency.setValueAtTime(freq, now + i * 0.08);
+                    });
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.linearRampToValueAtTime(0, now + 0.6);
+                    osc.start(now);
+                    osc.stop(now + 0.6);
+                } else if (type === 'die') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.linearRampToValueAtTime(100, now + 0.4);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.linearRampToValueAtTime(0, now + 0.4);
+                    osc.start(now);
+                    osc.stop(now + 0.4);
+                }
+            } catch(e) {}
+        }
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = VIEW_COLS * TILE_SIZE;  // 512px
+        canvas.height = VIEW_ROWS * TILE_SIZE; // 256px
+
+        let grid = Array(GRID_ROWS).fill(0).map(() => Array(GRID_COLS).fill(TILE_EMPTY));
+        let activeGrid = Array(GRID_ROWS).fill(0).map(() => Array(GRID_COLS).fill(TILE_EMPTY));
+        let donutTimers = {};
+
+        let player = {
+            x: 2 * TILE_SIZE,
+            y: 10 * TILE_SIZE,
+            vx: 0,
+            vy: 0,
+            width: 12,
+            height: 14,
+            grounded: false,
+            facingLeft: false,
+            powerState: 0,
+            invulnerableTimer: 0,
+            climbing: false,
+            alive: true
+        };
+
+        let entities = [];
+        let score = 0;
+        let coins = 0;
+        let gameState = 'PLAYING';
+        let pSwitchActiveTimer = 0;
+
+        const keys = {};
+
+        function buildDefaultLevel() {
+            grid = Array(GRID_ROWS).fill(0).map(() => Array(GRID_COLS).fill(TILE_EMPTY));
+            for (let c = 0; c < GRID_COLS; c++) {
+                grid[GRID_ROWS - 1][c] = TILE_GROUND;
+            }
+            grid[GRID_ROWS - 2][2] = TILE_START;
+            grid[GRID_ROWS - 2][GRID_COLS - 5] = TILE_GOAL;
+        }
+
+        function getThemeColors() {
+            if (currentTheme === 'underground') {
+                return { sky: '#000000', ground: '#2563eb', groundTop: '#60a5fa', brick: '#1d4ed8' };
+            } else if (currentTheme === 'castle') {
+                return { sky: '#111827', ground: '#475569', groundTop: '#94a3b8', brick: '#b91c1c' };
+            }
+            return { sky: '#60a5fa', ground: '#15803d', groundTop: '#4ade80', brick: '#c2410c' };
+        }
+
+        function drawTileSprite(cCtx, type, x, y, size) {
+            const customDef = TILE_DEFS[type];
+            if (customDef && customDef.sprite) {
+                cCtx.save();
+                customDef.sprite(cCtx, x, y, size);
+                cCtx.restore();
+                return;
+            }
+
+            const colors = getThemeColors();
+            cCtx.save();
+            cCtx.translate(x, y);
+
+            if (type === TILE_GROUND) {
+                cCtx.fillStyle = colors.groundTop;
+                cCtx.fillRect(0, 0, size, 4);
+                cCtx.fillStyle = colors.ground;
+                cCtx.fillRect(0, 4, size, size - 4);
+                cCtx.fillStyle = 'rgba(0,0,0,0.2)';
+                cCtx.fillRect(2, 6, 3, 3);
+                cCtx.fillRect(10, 10, 4, 3);
+            } 
+            else if (type === TILE_BRICK) {
+                cCtx.fillStyle = colors.brick;
+                cCtx.fillRect(0, 0, size, size);
+                cCtx.fillStyle = 'rgba(0,0,0,0.3)';
+                cCtx.fillRect(0, 0, size, 1);
+                cCtx.fillRect(0, 7, size, 1);
+                cCtx.fillRect(0, 15, size, 1);
+                cCtx.fillRect(7, 0, 1, 7);
+                cCtx.fillRect(15, 0, 1, 7);
+                cCtx.fillRect(3, 7, 1, 8);
+                cCtx.fillRect(11, 7, 1, 8);
+            } 
+            else if (type === TILE_HARD) {
+                cCtx.fillStyle = '#64748b';
+                cCtx.fillRect(0, 0, size, size);
+                cCtx.fillStyle = '#94a3b8';
+                cCtx.fillRect(1, 1, size - 2, 1);
+                cCtx.fillRect(1, 1, 1, size - 2);
+                cCtx.fillStyle = '#334155';
+                cCtx.fillRect(2, 2, 12, 12);
+            } 
+            else if (type === TILE_QUESTION || type === TILE_QUESTION_MUSHROOM || type === TILE_QUESTION_FIRE) {
+                cCtx.fillStyle = '#eab308';
+                cCtx.fillRect(0, 0, size, size);
+                cCtx.fillStyle = '#78350f';
+                cCtx.fillRect(0, 0, size, 1);
+                cCtx.fillRect(0, 0, 1, size);
+                cCtx.fillRect(size-1, 0, 1, size);
+                cCtx.fillRect(0, size-1, size, 1);
+                cCtx.fillStyle = '#fef08a';
+                cCtx.fillRect(6, 3, 4, 2);
+                cCtx.fillRect(9, 5, 2, 3);
+                cCtx.fillRect(7, 8, 2, 2);
+                cCtx.fillRect(7, 11, 2, 2);
+            } 
+            else if (type === TILE_EMPTY_BLOCK) {
+                cCtx.fillStyle = '#78350f';
+                cCtx.fillRect(0, 0, size, size);
+                cCtx.fillStyle = '#451a03';
+                cCtx.fillRect(1, 1, size - 2, size - 2);
+            }
+            else if (type === TILE_NOTE) {
+                cCtx.fillStyle = '#f43f5e';
+                cCtx.fillRect(0, 0, size, size);
+                cCtx.fillStyle = '#ffffff';
+                cCtx.fillRect(6, 4, 2, 8);
+                cCtx.fillRect(8, 4, 4, 2);
+                cCtx.fillRect(5, 10, 3, 3);
+            } 
+            else if (type === TILE_DONUT) {
+                cCtx.fillStyle = '#f97316';
+                cCtx.fillRect(1, 3, size - 2, size - 6);
+                cCtx.fillStyle = '#fdba74';
+                cCtx.fillRect(3, 1, size - 6, size - 2);
+                cCtx.fillStyle = currentTheme === 'castle' ? '#111827' : (currentTheme === 'underground' ? '#000000' : '#60a5fa');
+                cCtx.fillRect(6, 6, 4, 4);
+            } 
+            else if (type === TILE_COIN) {
+                cCtx.fillStyle = '#facc15';
+                cCtx.beginPath();
+                cCtx.arc(size / 2, size / 2, 5, 0, Math.PI * 2);
+                cCtx.fill();
+                cCtx.fillStyle = '#fef08a';
+                cCtx.fillRect(size / 2 - 1, size / 2 - 3, 2, 6);
+            } 
+            else if (type === TILE_PIPE) {
+                cCtx.fillStyle = '#16a34a';
+                cCtx.fillRect(0, 0, size, size);
+                cCtx.fillStyle = '#4ade80';
+                cCtx.fillRect(2, 0, 3, size);
+                cCtx.fillStyle = '#14532d';
+                cCtx.fillRect(size - 3, 0, 2, size);
+                cCtx.fillStyle = '#15803d';
+                cCtx.fillRect(0, 0, size, 3);
+            } 
+            else if (type === TILE_VINE) {
+                cCtx.fillStyle = '#22c55e';
+                cCtx.fillRect(7, 0, 2, size);
+                cCtx.fillRect(4, 3, 3, 3);
+                cCtx.fillRect(9, 9, 3, 3);
+            } 
+            else if (type === TILE_PSWITCH) {
+                cCtx.fillStyle = '#3b82f6';
+                cCtx.fillRect(3, 8, 10, 8);
+                cCtx.fillStyle = '#ffffff';
+                cCtx.fillRect(5, 10, 6, 4);
+                cCtx.fillStyle = '#1d4ed8';
+                cCtx.fillText('P', 6, 14);
+            } 
+            else if (type === TILE_TRAMPOLINE) {
+                cCtx.fillStyle = '#94a3b8';
+                cCtx.fillRect(2, 10, 12, 6);
+                cCtx.fillStyle = '#cbd5e1';
+                cCtx.fillRect(4, 6, 8, 4);
+            } 
+            else if (type === TILE_SPIKE) {
+                cCtx.fillStyle = '#94a3b8';
+                cCtx.beginPath();
+                cCtx.moveTo(2, 16);
+                cCtx.lineTo(8, 2);
+                cCtx.lineTo(14, 16);
+                cCtx.closePath();
+                cCtx.fill();
+            } 
+            else if (type === TILE_LAVA) {
+                cCtx.fillStyle = '#ef4444';
+                cCtx.fillRect(0, 0, size, size);
+                cCtx.fillStyle = '#f97316';
+                cCtx.fillRect(0, 0, size, 4);
+                cCtx.fillStyle = '#fef08a';
+                cCtx.fillRect(2, 2, 4, 2);
+                cCtx.fillRect(10, 1, 3, 2);
+            } 
+            else if (type === TILE_MUSHROOM_ITEM) {
+                cCtx.fillStyle = '#ef4444';
+                cCtx.fillRect(2, 2, 12, 8);
+                cCtx.fillStyle = '#ffffff';
+                cCtx.fillRect(4, 4, 3, 3);
+                cCtx.fillRect(9, 4, 3, 3);
+                cCtx.fillStyle = '#fde047';
+                cCtx.fillRect(4, 9, 8, 5);
+            } 
+            else if (type === TILE_FIREFLOWER_ITEM) {
+                cCtx.fillStyle = '#f97316';
+                cCtx.fillRect(4, 2, 8, 8);
+                cCtx.fillStyle = '#facc15';
+                cCtx.fillRect(6, 4, 4, 4);
+                cCtx.fillStyle = '#22c55e';
+                cCtx.fillRect(7, 10, 2, 6);
+            } 
+            else if (type === TILE_GOOMBA) {
+                cCtx.fillStyle = '#92400e';
+                cCtx.fillRect(3, 3, 10, 9);
+                cCtx.fillRect(1, 11, 14, 3);
+                cCtx.fillStyle = '#1e293b';
+                cCtx.fillRect(2, 13, 4, 3);
+                cCtx.fillRect(10, 13, 4, 3);
+                cCtx.fillStyle = '#ffffff';
+                cCtx.fillRect(4, 5, 2, 4);
+                cCtx.fillRect(10, 5, 2, 4);
+                cCtx.fillStyle = '#000000';
+                cCtx.fillRect(5, 6, 1, 2);
+                cCtx.fillRect(10, 6, 1, 2);
+            } 
+            else if (type === TILE_KOOPA) {
+                cCtx.fillStyle = '#22c55e';
+                cCtx.fillRect(3, 2, 9, 8);
+                cCtx.fillRect(2, 8, 11, 6);
+                cCtx.fillStyle = '#ffffff';
+                cCtx.fillRect(4, 9, 7, 4);
+                cCtx.fillStyle = '#fde047';
+                cCtx.fillRect(1, 12, 4, 4);
+                cCtx.fillRect(10, 12, 4, 4);
+            } 
+            else if (type === TILE_THWOMP) {
+                cCtx.fillStyle = '#64748b';
+                cCtx.fillRect(1, 1, 14, 14);
+                cCtx.fillStyle = '#334155';
+                cCtx.fillRect(2, 2, 12, 12);
+                cCtx.fillStyle = '#ef4444';
+                cCtx.fillRect(3, 4, 3, 3);
+                cCtx.fillRect(10, 4, 3, 3);
+                cCtx.fillStyle = '#ffffff';
+                cCtx.fillRect(4, 10, 8, 2);
+            } 
+            else if (type === TILE_BOWSER) {
+                cCtx.fillStyle = '#15803d';
+                cCtx.fillRect(1, 1, 14, 14);
+                cCtx.fillStyle = '#f97316';
+                cCtx.fillRect(3, 0, 10, 3);
+                cCtx.fillStyle = '#ef4444';
+                cCtx.fillRect(3, 4, 3, 2);
+                cCtx.fillRect(10, 4, 3, 2);
+                cCtx.fillStyle = '#facc15';
+                cCtx.fillRect(2, 8, 12, 4);
+            } 
+            else if (type === TILE_START) {
+                cCtx.fillStyle = '#94a3b8';
+                cCtx.fillRect(7, 2, 2, 14);
+                cCtx.fillStyle = '#3b82f6';
+                cCtx.beginPath();
+                cCtx.moveTo(9, 2);
+                cCtx.lineTo(15, 5);
+                cCtx.lineTo(9, 8);
+                cCtx.closePath();
+                cCtx.fill();
+            } 
+            else if (type === TILE_GOAL) {
+                cCtx.fillStyle = '#cbd5e1';
+                cCtx.fillRect(7, 1, 2, 15);
+                cCtx.fillStyle = '#facc15';
+                cCtx.fillRect(6, 0, 4, 2);
+                cCtx.fillStyle = '#ef4444';
+                cCtx.beginPath();
+                cCtx.moveTo(9, 2);
+                cCtx.lineTo(16, 6);
+                cCtx.lineTo(9, 10);
+                cCtx.closePath();
+                cCtx.fill();
+            }
+
+            cCtx.restore();
+        }
+
+        function drawPlayerSprite(p) {
+            ctx.save();
+            ctx.translate(Math.round(p.x - cameraX), Math.round(p.y));
+
+            if (p.invulnerableTimer > 0 && Math.floor(Date.now() / 50) % 2 === 0) {
+                ctx.globalAlpha = 0.5;
+            }
+
+            if (p.facingLeft) {
+                ctx.scale(-1, 1);
+                ctx.translate(-p.width, 0);
+            }
+
+            const isBig = p.powerState > 0;
+            const isFire = p.powerState === 2;
+
+            const hatColor = isFire ? '#ffffff' : '#ef4444';
+            const shirtColor = isFire ? '#ef4444' : (isBig ? '#2563eb' : '#ef4444');
+            const overallColor = isFire ? '#2563eb' : (isBig ? '#ef4444' : '#2563eb');
+
+            if (!isBig) {
+                ctx.fillStyle = hatColor;
+                ctx.fillRect(2, 0, 8, 3);
+                ctx.fillRect(2, 2, 10, 2);
+
+                ctx.fillStyle = '#fde047';
+                ctx.fillRect(3, 4, 7, 4);
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(8, 4, 1, 2);
+                ctx.fillStyle = '#78350f';
+                ctx.fillRect(5, 6, 5, 2);
+
+                ctx.fillStyle = overallColor;
+                ctx.fillRect(3, 8, 6, 5);
+                ctx.fillStyle = shirtColor;
+                ctx.fillRect(1, 8, 2, 3);
+                ctx.fillRect(9, 8, 2, 3);
+
+                ctx.fillStyle = '#78350f';
+                ctx.fillRect(2, 12, 3, 2);
+                ctx.fillRect(7, 12, 3, 2);
+            } else {
+                ctx.fillStyle = hatColor;
+                ctx.fillRect(3, 0, 9, 4);
+                ctx.fillRect(2, 3, 11, 3);
+
+                ctx.fillStyle = '#fde047';
+                ctx.fillRect(4, 6, 8, 5);
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(10, 6, 2, 2);
+                ctx.fillStyle = '#78350f';
+                ctx.fillRect(6, 9, 6, 2);
+
+                ctx.fillStyle = shirtColor;
+                ctx.fillRect(3, 11, 8, 5);
+                ctx.fillRect(1, 11, 2, 5);
+                ctx.fillRect(11, 11, 2, 5);
+
+                ctx.fillStyle = overallColor;
+                ctx.fillRect(3, 16, 8, 6);
+
+                ctx.fillStyle = '#78350f';
+                ctx.fillRect(2, 22, 4, 2);
+                ctx.fillRect(8, 22, 4, 2);
+            }
+
+            ctx.restore();
+        }
+
+        // 開発用：登録済みタイルの一覧を取得できます。
+        // 例: console.log(getTileRegistry())
+        function getTileRegistry() {
+            return Object.values(TILE_DEFS).map(({ id, key, name, cat, solid }) => ({ id, key, name, cat, solid }));
+        }
+
+        function setPaletteCategory(cat) {
+            currentCategory = cat;
+            ['terrain', 'items', 'enemies'].forEach(c => {
+                const tab = document.getElementById(`tab-${c}`);
+                if (c === cat) {
+                    tab.className = "px-3 py-1 bg-slate-700 rounded-t text-yellow-400 border-b-2 border-yellow-400 font-bold";
+                } else {
+                    tab.className = "px-3 py-1 bg-slate-800 rounded-t text-slate-400 hover:text-white";
+                }
+            });
+            renderPalette();
+        }
+
+        function renderPalette() {
+            const container = document.getElementById('palette-container');
+            container.innerHTML = '';
+
+            const items = PALETTE_ITEMS.filter(i => i.cat === currentCategory);
+            items.forEach(item => {
+                const btn = document.createElement('button');
+                btn.onclick = () => selectTile(item.id);
+                btn.id = `tile-btn-${item.id}`;
+                btn.className = `tile-btn btn-retro p-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg flex flex-col items-center gap-1 border border-slate-600 min-w-[52px] ${selectedTile === item.id ? 'tile-active' : ''}`;
+
+                if (item.id === TILE_EMPTY) {
+                    btn.innerHTML = `<div class="w-6 h-6 bg-slate-800 rounded border border-dashed border-red-400 flex items-center justify-center text-xs text-red-400 font-bold">✕</div><span class="text-[9px] text-slate-300">${item.name}</span>`;
+                } else {
+                    const iconCanvas = document.createElement('canvas');
+                    iconCanvas.width = 24;
+                    iconCanvas.height = 24;
+                    const iconCtx = iconCanvas.getContext('2d');
+                    drawTileSprite(iconCtx, item.id, 0, 0, 24);
+                    btn.appendChild(iconCanvas);
+                    
+                    const span = document.createElement('span');
+                    span.className = 'text-[9px] text-slate-300 font-semibold';
+                    span.innerText = item.name;
+                    btn.appendChild(span);
+                }
+                container.appendChild(btn);
+            });
+        }
+
+        function selectTile(type) {
+            selectedTile = type;
+            document.querySelectorAll('.tile-btn').forEach(btn => btn.classList.remove('tile-active'));
+            const activeBtn = document.getElementById(`tile-btn-${type}`);
+            if (activeBtn) activeBtn.classList.add('tile-active');
+        }
+
+        function hideOverlay() {
+            const overlay = document.getElementById('overlay-msg');
+            if (overlay) overlay.classList.add('hidden');
+        }
+
+        function showOverlay(title, sub) {
+            const overlay = document.getElementById('overlay-msg');
+            const msgTitle = document.getElementById('msg-title');
+            const msgSub = document.getElementById('msg-sub');
+            if (msgTitle) msgTitle.innerText = title;
+            if (msgSub) msgSub.innerText = sub;
+            if (overlay) overlay.classList.remove('hidden');
+        }
+
+        function updateHUD() {
+            const scoreEl = document.getElementById('hud-score');
+            const coinsEl = document.getElementById('hud-coins');
+            const powerEl = document.getElementById('hud-power');
+            const statusEl = document.getElementById('hud-status');
+
+            if (scoreEl) scoreEl.innerText = `SCORE: ${String(score).padStart(5, '0')}`;
+            if (coinsEl) coinsEl.innerText = `🪙 x${String(coins).padStart(2, '0')}`;
+            if (powerEl) {
+                const pNames = ['M [SMALL]', 'SUPER [BIG]', 'FIRE [FLOWER]'];
+                powerEl.innerText = pNames[player.powerState] || 'M';
+            }
+            if (statusEl) statusEl.innerText = gameState;
+        }
+
+        function checkOverlap(r1, r2) {
+            return r1.x < r2.x + r2.width &&
+                   r1.x + r1.width > r2.x &&
+                   r1.y < r2.y + r2.height &&
+                   r1.y + r1.height > r2.y;
+        }
+
+        function setPlayerPower(power) {
+            player.powerState = power;
+            if (power > 0) {
+                player.height = 24;
+            } else {
+                player.height = 14;
+            }
+        }
+
+        function hurtPlayer() {
+            if (player.invulnerableTimer > 0 || !player.alive) return;
+
+            if (player.powerState > 0) {
+                playSound('bump');
+                setPlayerPower(0);
+                player.invulnerableTimer = 60;
+            } else {
+                player.alive = false;
+                playSound('die');
+                triggerGameOver("やられてしまった！");
+            }
+        }
+
+        function triggerGameOver(reason) {
+            gameState = 'GAME OVER';
+            showOverlay('GAME OVER', reason || 'ざんねん！もういちどチャレンジしよう。');
+            updateHUD();
+        }
+
+        function triggerWin() {
+            if (gameState === 'CLEAR!') return;
+            gameState = 'CLEAR!';
+            playSound('win');
+            showOverlay('STAGE CLEAR!', 'おめでとう！ゴールに到達しました。');
+            updateHUD();
+        }
+
+        function resetPlayState() {
+            gameState = 'PLAYING';
+            score = 0;
+            coins = 0;
+            pSwitchActiveTimer = 0;
+            donutTimers = {};
+            entities = [];
+
+            activeGrid = grid.map(row => [...row]);
+
+            let startX = 2 * TILE_SIZE;
+            let startY = 10 * TILE_SIZE;
+
+            for (let r = 0; r < GRID_ROWS; r++) {
+                for (let c = 0; c < GRID_COLS; c++) {
+                    const tile = activeGrid[r][c];
+                    if (tile === TILE_START) {
+                        startX = c * TILE_SIZE;
+                        startY = (r - 1) * TILE_SIZE;
+                    } else {
+                        // 敵・アイテムの初期状態は外部ファイルで管理します。
+                        const enemyDef = window.PIXEL_ENEMIES?.byTile?.[tile];
+                        const itemDef = window.PIXEL_ITEMS?.byTile?.[tile];
+                        if (enemyDef) {
+                            entities.push(enemyDef.create(c, r));
+                            activeGrid[r][c] = TILE_EMPTY;
+                        } else if (itemDef) {
+                            entities.push(itemDef.create(c, r));
+                            activeGrid[r][c] = TILE_EMPTY;
+                        }
+                    }
+                }
+            }
+
+            player = {
+                x: startX,
+                y: startY,
+                vx: 0,
+                vy: 0,
+                width: 12,
+                height: 14,
+                grounded: false,
+                facingLeft: false,
+                powerState: 0,
+                invulnerableTimer: 0,
+                climbing: false,
+                alive: true
+            };
+
+            cameraX = Math.max(0, Math.min((GRID_COLS - VIEW_COLS) * TILE_SIZE, player.x - (VIEW_COLS * TILE_SIZE) / 2));
+            hideOverlay();
+            updateHUD();
+        }
+
+        function setMode(newMode) {
+            if (newMode === 'EDIT' && loadedCourseMeta && !loadedCourseMeta.isMine) {
+                showToast('他人のコースは編集・改編できません（プレイ専用）', '🔒');
+                return;
+            }
+
+            mode = newMode;
+            const playBtn = document.getElementById('btn-mode-play');
+            const editBtn = document.getElementById('btn-mode-edit');
+            const paletteBar = document.getElementById('palette-bar');
+            const hud = document.getElementById('game-hud');
+            const editorScroll = document.getElementById('editor-scroll-container');
+
+            if (mode === 'PLAY') {
+                playBtn.classList.add('ring-2', 'ring-emerald-300');
+                editBtn.classList.remove('ring-2', 'ring-indigo-300');
+                paletteBar.classList.add('hidden');
+                hud.classList.remove('hidden');
+                if (editorScroll) editorScroll.classList.add('hidden');
+                resetPlayState();
+            } else {
+                editBtn.classList.add('ring-2', 'ring-indigo-300');
+                playBtn.classList.remove('ring-2', 'ring-emerald-300');
+                paletteBar.classList.remove('hidden');
+                hud.classList.add('hidden');
+                if (editorScroll) editorScroll.classList.remove('hidden');
+                hideOverlay();
+                updateCameraScrollUI();
+            }
+        }
+
+        function updateCameraScrollUI() {
+            const maxCam = (GRID_COLS - VIEW_COLS) * TILE_SIZE;
+            cameraX = Math.max(0, Math.min(maxCam, cameraX));
+            const slider = document.getElementById('camera-slider');
+            if (slider) {
+                slider.max = maxCam;
+                slider.value = cameraX;
+            }
+            const posText = document.getElementById('camera-pos-text');
+            if (posText) {
+                const currentTileCol = Math.floor(cameraX / TILE_SIZE);
+                posText.innerText = `${currentTileCol} / ${GRID_COLS - VIEW_COLS}`;
+            }
+        }
+
+        function onCameraSliderInput(val) {
+            cameraX = parseFloat(val);
+            updateCameraScrollUI();
+            render();
+        }
+
+        function scrollEditor(delta) {
+            cameraX += delta;
+            updateCameraScrollUI();
+            render();
+        }
+
+        function changeTheme(theme) {
+            currentTheme = theme;
+            renderPalette();
+            render();
+        }
+
+        function encodeLevelData() {
+            // M2: JSON + Base64。タイルIDを1文字に限定しないため、
+            // 25個を超える新規タイルを追加しても保存できます。
+            // 旧M1コードは decodeLevelData() で引き続き読み込めます。
+            const payload = JSON.stringify({
+                version: 2,
+                theme: currentTheme,
+                rows: GRID_ROWS,
+                cols: GRID_COLS,
+                grid
+            });
+            const bytes = new TextEncoder().encode(payload);
+            let binary = '';
+            const chunk = 0x8000;
+            for (let i = 0; i < bytes.length; i += chunk) {
+                binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+            }
+            return `M2:${btoa(binary)}`;
+        }
+
+        function decodeLevelData(str) {
+            str = String(str || '').trim();
+
+            // 新形式 M2
+            if (str.startsWith('M2:')) {
+                try {
+                    const binary = atob(str.slice(3));
+                    const bytes = Uint8Array.from(binary, ch => ch.charCodeAt(0));
+                    const payload = JSON.parse(new TextDecoder().decode(bytes));
+                    const theme = payload.theme || 'overworld';
+                    const sourceGrid = Array.isArray(payload.grid) ? payload.grid : [];
+                    const newGrid = Array(GRID_ROWS).fill(0).map(() => Array(GRID_COLS).fill(TILE_EMPTY));
+                    for (let r = 0; r < Math.min(GRID_ROWS, sourceGrid.length); r++) {
+                        if (!Array.isArray(sourceGrid[r])) continue;
+                        for (let c = 0; c < Math.min(GRID_COLS, sourceGrid[r].length); c++) {
+                            const id = Number(sourceGrid[r][c]);
+                            newGrid[r][c] = Number.isInteger(id) && TILE_DEFS[id] ? id : TILE_EMPTY;
+                        }
+                    }
+                    return { grid: newGrid, theme };
+                } catch (e) {
+                    console.error('M2 decode failed:', e);
+                    showToast('コースデータが壊れています', '⚠️');
+                    return {
+                        grid: Array(GRID_ROWS).fill(0).map(() => Array(GRID_COLS).fill(TILE_EMPTY)),
+                        theme: 'overworld'
+                    };
+                }
+            }
+
+            // 旧形式 M1
+            let theme = 'overworld';
+            let rle = str;
+
+            if (str.startsWith('M1:')) {
+                const parts = str.split(':');
+                theme = parts[1] || 'overworld';
+                rle = parts[2] || '';
+            }
+
+            const regex = /([a-z])(\d*)/g;
+            let match;
+            const flat = [];
+            while ((match = regex.exec(rle)) !== null) {
+                const tileId = match[1].charCodeAt(0) - 97;
+                const count = match[2] ? parseInt(match[2], 10) : 1;
+                for (let i = 0; i < count; i++) flat.push(tileId);
+            }
+
+            const newGrid = Array(GRID_ROWS).fill(0).map(() => Array(GRID_COLS).fill(TILE_EMPTY));
+            for (let i = 0; i < Math.min(flat.length, GRID_ROWS * GRID_COLS); i++) {
+                const r = Math.floor(i / GRID_COLS);
+                const c = i % GRID_COLS;
+                newGrid[r][c] = TILE_DEFS[flat[i]] ? flat[i] : TILE_EMPTY;
+            }
+            return { grid: newGrid, theme };
+        }
+
+        let modalMode = 'EXPORT';
+
+        function showToast(text, icon = '✨') {
+            const toast = document.getElementById('toast-msg');
+            const toastText = document.getElementById('toast-text');
+            const toastIcon = document.getElementById('toast-icon');
+            if (toast && toastText) {
+                toastText.innerText = text;
+                if (toastIcon) toastIcon.innerText = icon;
+                toast.classList.remove('translate-y-20', 'opacity-0');
+                setTimeout(() => {
+                    toast.classList.add('translate-y-20', 'opacity-0');
+                }, 3000);
+            }
+        }
+
+        function exportLevelPrompt() {
+            modalMode = 'EXPORT';
+            document.getElementById('modal-title').innerText = "コースコード出力";
+            document.getElementById('modal-desc').innerText = "以下のコードをコピーして保存・共有できます。";
+            document.getElementById('modal-textarea').value = encodeLevelData();
+            document.getElementById('modal-action-btn').innerText = "📋 コピー";
+            document.getElementById('code-modal').classList.remove('hidden');
+        }
+
+        function checkUrlCourseLoad() {
+            const params = new URLSearchParams(window.location.search);
+            const courseCode = params.get('c');
+            if (courseCode) {
+                try {
+                    const result = decodeLevelData(courseCode);
+                    grid = result.grid;
+                    currentTheme = result.theme;
+                    document.getElementById('theme-select').value = currentTheme;
+                    loadedCourseMeta = { isMine: false, title: '共有URLコース' };
+                    setMode('PLAY');
+                    showToast('URLからコースを読み込みました！', '🔗');
+                } catch(e) {
+                    console.warn("URL course parse failed", e);
+                }
+            }
+        }
+
+        function importLevelPrompt() {
+            modalMode = 'IMPORT';
+            document.getElementById('modal-title').innerText = "コースコード読込";
+            document.getElementById('modal-desc').innerText = "コースコードをここに貼り付けてください。";
+            document.getElementById('modal-textarea').value = "";
+            document.getElementById('modal-action-btn').innerText = "📥 読み込む";
+            document.getElementById('code-modal').classList.remove('hidden');
+        }
+
+        function closeCodeModal() {
+            document.getElementById('code-modal').classList.add('hidden');
+        }
+
+        function handleModalAction() {
+            const textarea = document.getElementById('modal-textarea');
+            if (modalMode === 'EXPORT') {
+                if (loadedCourseMeta && !loadedCourseMeta.isMine) {
+                    showToast('他人のコースは出力・コピーできません', '🔒');
+                    closeCodeModal();
+                    return;
+                }
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    showToast('コースコードをコピーしました！', '📋');
+                } catch(e) {
+                    showToast('手動でコピーしてください。', '⚠️');
+                }
+                closeCodeModal();
+            } else {
+                const inputStr = textarea.value.trim();
+                if (!inputStr) return;
+                try {
+                    const result = decodeLevelData(inputStr);
+                    grid = result.grid;
+                    currentTheme = result.theme;
+                    document.getElementById('theme-select').value = currentTheme;
+                    loadedCourseMeta = { isMine: false, title: '外部コース' };
+                    if (mode === 'PLAY') resetPlayState();
+                    else render();
+                    showToast('コースを読み込みました（保護モード・編集不可）', '🔒');
+                    closeCodeModal();
+                } catch(e) {
+                    showToast('コードの読み込みに失敗しました。', '❌');
+                }
+            }
+        }
+
+        function saveLevel() {
+            if (loadedCourseMeta && !loadedCourseMeta.isMine) {
+                showToast('他人のコースは保存・改編できません', '🔒');
+                return;
+            }
+            const data = encodeLevelData();
+            localStorage.setItem('m_maker_level', data);
+            showToast('ブラウザにコースを保存しました！', '💾');
+        }
+
+        function clearLevel() {
+            loadedCourseMeta = null;
+            buildDefaultLevel();
+            if (mode === 'PLAY') resetPlayState();
+            else render();
+            showToast('ステージをまっさらな状態に初期化しました。', '🗑️');
+        }
+
+        // Pスイッチ中は「見た目」だけでなく、実際の当たり判定も入れ替える。
+        // 元の地面/レンガをコイン化したものは本物のコインとして取得可能、
+        // 元々コインだった場所はレンガ化して足場になる。
+        function getGameplayTile(r, c) {
+            if (r < 0 || r >= GRID_ROWS || c < 0 || c >= GRID_COLS) return TILE_HARD;
+            const tile = activeGrid[r][c];
+            if (pSwitchActiveTimer > 0) {
+                if (tile === TILE_BRICK) return TILE_COIN;
+                if (tile === TILE_COIN) return TILE_BRICK;
+            }
+            return tile;
+        }
+
+        function isSolidTile(tile) {
+            // 新規タイルは registry の solid だけで当たり判定が決まります。
+            // 既存タイルも同じ値を登録済みなので、従来挙動を維持します。
+            return !!TILE_DEFS[tile]?.solid;
+        }
+
+        function getTileAtRect(rect, includeOutside = false) {
+            const hits = [];
+            const left = Math.floor(rect.x / TILE_SIZE);
+            const right = Math.floor((rect.x + rect.width - 0.001) / TILE_SIZE);
+            const top = Math.floor(rect.y / TILE_SIZE);
+            const bottom = Math.floor((rect.y + rect.height - 0.001) / TILE_SIZE);
+
+            for (let r = top; r <= bottom; r++) {
+                for (let c = left; c <= right; c++) {
+                    if (r < 0 || r >= GRID_ROWS || c < 0 || c >= GRID_COLS) {
+                        if (includeOutside) hits.push({ r, c, tile: TILE_HARD });
+                        continue;
+                    }
+                    hits.push({ r, c, tile: getGameplayTile(r, c) });
+                }
+            }
+            return hits;
+        }
+
+        function entitySolidCollision(e, dx, dy) {
+            const next = { x: e.x + dx, y: e.y + dy, width: e.width, height: e.height };
+            let hitX = false;
+            let hitY = false;
+
+            // Horizontal collision first.
+            const hRect = { x: next.x, y: e.y, width: e.width, height: e.height };
+            for (const h of getTileAtRect(hRect)) {
+                if (isSolidTile(h.tile)) {
+                    const tx = h.c * TILE_SIZE;
+                    if (dx > 0) {
+                        e.x = tx - e.width;
+                    } else if (dx < 0) {
+                        e.x = tx + TILE_SIZE;
+                    }
+                    e.vx = -e.vx || 0;
+                    hitX = true;
+                    break;
+                }
+            }
+            if (!hitX) e.x = next.x;
+
+            // Vertical collision.
+            const vRect = { x: e.x, y: next.y, width: e.width, height: e.height };
+            for (const h of getTileAtRect(vRect)) {
+                if (isSolidTile(h.tile)) {
+                    const ty = h.r * TILE_SIZE;
+                    if (dy > 0) {
+                        e.y = ty - e.height;
+                        e.vy = 0;
+                        e.grounded = true;
+                    } else if (dy < 0) {
+                        e.y = ty + TILE_SIZE;
+                        e.vy = Math.abs(e.vy || 0) * 0.35;
+                    }
+                    hitY = true;
+                    break;
+                }
+            }
+            if (!hitY) {
+                e.y = next.y;
+                e.grounded = false;
+            }
+            return { hitX, hitY };
+        }
+
+        function update() {
+            if (mode !== 'PLAY' || gameState !== 'PLAYING') return;
+
+            if (player.invulnerableTimer > 0) player.invulnerableTimer--;
+            if (pSwitchActiveTimer > 0) pSwitchActiveTimer--;
+
+            // P-switch timer expiry restores normal visual/state automatically.
+            let touchingVine = false;
+            const startCol = Math.floor(player.x / TILE_SIZE);
+            const endCol = Math.floor((player.x + player.width - 0.001) / TILE_SIZE);
+            const startRow = Math.floor(player.y / TILE_SIZE);
+            const endRow = Math.floor((player.y + player.height - 0.001) / TILE_SIZE);
+
+            for (let r = startRow; r <= endRow; r++) {
+                for (let c = startCol; c <= endCol; c++) {
+                    if (r >= 0 && r < GRID_ROWS && c >= 0 && c < GRID_COLS) {
+                        if (activeGrid[r][c] === TILE_VINE) touchingVine = true;
+                    }
+                }
+            }
+
+            if (touchingVine && (keys['ArrowUp'] || keys['KeyW'] || keys['ArrowDown'] || keys['KeyS'])) {
+                player.climbing = true;
+            }
+            if (!touchingVine) player.climbing = false;
+
+            if (player.climbing) {
+                player.vx = 0;
+                player.vy = 0;
+                if (keys['ArrowUp'] || keys['KeyW']) player.vy = -1.5;
+                if (keys['ArrowDown'] || keys['KeyS']) player.vy = 1.5;
+                if (keys['ArrowLeft'] || keys['KeyA']) player.vx = -1;
+                if (keys['ArrowRight'] || keys['KeyD']) player.vx = 1;
+
+                if (keys['Space'] || keys['KeyK']) {
+                    player.climbing = false;
+                    player.vy = -4;
+                    playSound('jump');
+                }
+            } else {
+                if (keys['ArrowLeft'] || keys['KeyA']) {
+                    player.vx = -2;
+                    player.facingLeft = true;
+                } else if (keys['ArrowRight'] || keys['KeyD']) {
+                    player.vx = 2;
+                    player.facingLeft = false;
+                } else {
+                    player.vx *= 0.8;
+                }
+
+                if ((keys['ArrowUp'] || keys['KeyW'] || keys['Space'] || keys['KeyK']) && player.grounded) {
+                    player.vy = -5.5;
+                    player.grounded = false;
+                    playSound('jump');
+                }
+
+                player.vy += 0.25;
+                if (player.vy > 6) player.vy = 6;
+            }
+
+            // Prevent the player from escaping the level horizontally.
+            player.x += player.vx;
+            if (player.x < 0) {
+                player.x = 0;
+                player.vx = 0;
+            }
+            if (player.x + player.width > GRID_COLS * TILE_SIZE) {
+                player.x = GRID_COLS * TILE_SIZE - player.width;
+                player.vx = 0;
+            }
+            resolveCollisions('horizontal');
+
+            player.y += player.vy;
+            player.grounded = false;
+            resolveCollisions('vertical');
+
+            cameraX = player.x - (VIEW_COLS * TILE_SIZE) / 2;
+            cameraX = Math.max(0, Math.min((GRID_COLS - VIEW_COLS) * TILE_SIZE, cameraX));
+
+            if (player.y > GRID_ROWS * TILE_SIZE) {
+                hurtPlayer();
+            }
+
+            // Timed donut platforms.
+            for (const key in donutTimers) {
+                donutTimers[key]--;
+                if (donutTimers[key] <= 0) {
+                    const [r, c] = key.split(',').map(Number);
+                    if (activeGrid[r] && activeGrid[r][c] === TILE_DONUT) {
+                        activeGrid[r][c] = TILE_EMPTY;
+                    }
+                    delete donutTimers[key];
+                }
+            }
+
+            updateEntities();
+            updateHUD();
+        }
+
+        function resolveCollisions(direction) {
+            const startCol = Math.floor(player.x / TILE_SIZE);
+            const endCol = Math.floor((player.x + player.width - 0.001) / TILE_SIZE);
+            const startRow = Math.floor(player.y / TILE_SIZE);
+            const endRow = Math.floor((player.y + player.height - 0.001) / TILE_SIZE);
+
+            for (let r = startRow; r <= endRow; r++) {
+                for (let c = startCol; c <= endCol; c++) {
+                    if (r < 0 || r >= GRID_ROWS || c < 0 || c >= GRID_COLS) continue;
+                    const tile = getGameplayTile(r, c);
+                    const tileRect = { x: c * TILE_SIZE, y: r * TILE_SIZE, width: TILE_SIZE, height: TILE_SIZE };
+                    const pRect = { x: player.x, y: player.y, width: player.width, height: player.height };
+
+                    if (!checkOverlap(pRect, tileRect)) continue;
+
+                    // Registry に登録した新規タイルの汎用タッチ処理。
+                    const tileDef = TILE_DEFS[tile];
+                    if (tileDef?.onTouch) {
+                        tileDef.onTouch(player, { r, c, tile, rect: tileRect, direction });
+                    }
+
+                    // Collectible coin. Pスイッチ中はレンガ→コインになったものもここに入る。
+                    if (tile === TILE_COIN) {
+                        activeGrid[r][c] = TILE_EMPTY;
+                        coins++;
+                        score += 100;
+                        playSound('coin');
+                        continue;
+                    }
+
+                    if (tile === TILE_GOAL) {
+                        triggerWin();
+                        return;
+                    }
+
+                    if (tile === TILE_SPIKE || tile === TILE_LAVA) {
+                        hurtPlayer();
+                        return;
+                    }
+
+                    if (tile === TILE_PSWITCH) {
+                        activeGrid[r][c] = TILE_EMPTY;
+                        pSwitchActiveTimer = 600;
+                        score += 500;
+                        playSound('coin');
+                        continue;
+                    }
+
+                    // Special jump platforms.
+                    if (direction === 'vertical' && player.vy >= 0 &&
+                        (tile === TILE_TRAMPOLINE || tile === TILE_NOTE)) {
+                        player.y = tileRect.y - player.height;
+                        player.vy = tile === TILE_TRAMPOLINE ? -8 : -6.5;
+                        player.grounded = false;
+                        playSound('jump');
+                        continue;
+                    }
+
+                    // Donut platform starts falling after being stood on.
+                    if (direction === 'vertical' && player.vy >= 0 && tile === TILE_DONUT) {
+                        player.y = tileRect.y - player.height;
+                        player.vy = 0;
+                        player.grounded = true;
+                        const key = `${r},${c}`;
+                        if (!donutTimers[key]) donutTimers[key] = 45;
+                        continue;
+                    }
+
+                    if (isSolidTile(tile)) {
+                        if (direction === 'horizontal') {
+                            if (player.vx > 0) player.x = tileRect.x - player.width;
+                            else if (player.vx < 0) player.x = tileRect.x + tileRect.width;
+                            player.vx = 0;
+                        } else if (direction === 'vertical') {
+                            if (player.vy > 0) {
+                                player.y = tileRect.y - player.height;
+                                player.vy = 0;
+                                player.grounded = true;
+                                if (tileDef?.onStep) {
+                                    tileDef.onStep(player, { r, c, tile, rect: tileRect });
+                                }
+                            } else if (player.vy < 0) {
+                                player.y = tileRect.y + tileRect.height;
+                                player.vy = 0;
+                                if (tileDef?.onHeadHit) {
+                                    tileDef.onHeadHit(player, { r, c, tile, rect: tileRect });
+                                }
+                                hitBlock(r, c, tile);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function hitBlock(r, c, tile) {
+            if (tile === TILE_QUESTION) {
+                activeGrid[r][c] = TILE_EMPTY_BLOCK;
+                coins++;
+                score += 100;
+                playSound('coin');
+            } else if (tile === TILE_QUESTION_MUSHROOM) {
+                activeGrid[r][c] = TILE_EMPTY_BLOCK;
+                entities.push({
+                    type: 'item_mushroom', x: c * TILE_SIZE, y: (r - 1) * TILE_SIZE,
+                    vx: 1, vy: 0, width: 14, height: 14, grounded: false, alive: true
+                });
+                playSound('powerup');
+            } else if (tile === TILE_QUESTION_FIRE) {
+                activeGrid[r][c] = TILE_EMPTY_BLOCK;
+                entities.push({
+                    type: 'item_fireflower', x: c * TILE_SIZE, y: (r - 1) * TILE_SIZE,
+                    vx: 0, vy: 0, width: 14, height: 14, grounded: false, alive: true
+                });
+                playSound('powerup');
+            } else if (tile === TILE_BRICK) {
+                if (player.powerState > 0) {
+                    activeGrid[r][c] = TILE_EMPTY;
+                    score += 50;
+                    playSound('stomp');
+                } else {
+                    playSound('bump');
+                }
+            } else {
+                playSound('bump');
+            }
+        }
+
+        function updateEntities() {
+            for (const e of entities) {
+                if (!e.alive) continue;
+
+                // Items: they now use the same collision system as enemies,
+                // so they cannot randomly pass through floors/walls.
+                if (e.type === 'item_mushroom' || e.type === 'item_fireflower') {
+                    e.vy = Math.min((e.vy || 0) + 0.2, 6);
+                    if (e.type === 'item_mushroom' && Math.abs(e.vx) < 0.01) e.vx = 1;
+
+                    const hit = entitySolidCollision(e, e.vx, e.vy);
+                    if (hit.hitX && e.type === 'item_mushroom') e.vx = e.vx || 1;
+
+                    // Keep items inside the playable area.
+                    if (e.x < 0) { e.x = 0; e.vx = Math.abs(e.vx || 1); }
+                    if (e.x + e.width > GRID_COLS * TILE_SIZE) {
+                        e.x = GRID_COLS * TILE_SIZE - e.width;
+                        e.vx = -Math.abs(e.vx || 1);
+                    }
+                    if (e.y > GRID_ROWS * TILE_SIZE + 32) {
+                        e.y = 0;
+                        e.vy = 0;
+                    }
+
+                    if (checkOverlap(player, e)) {
+                        e.alive = false;
+                        if (e.type === 'item_mushroom') setPlayerPower(Math.max(1, player.powerState));
+                        else setPlayerPower(2);
+                        score += 1000;
+                        playSound('powerup');
+                    }
+                    continue;
+                }
+
+                if (e.type === 'goomba' || e.type === 'koopa') {
+                    e.vy = Math.min((e.vy || 0) + 0.2, 6);
+                    if (e.isShell && Math.abs(e.vx) < 0.01) {
+                        e.vx = 0;
+                    } else if (Math.abs(e.vx) < 0.01) {
+                        e.vx = e.type === 'goomba' ? -0.5 : -0.6;
+                    }
+
+                    const hit = entitySolidCollision(e, e.vx, e.vy);
+                    if (hit.hitX && !e.isShell) e.vx = -e.vx;
+
+                    if (e.x < 0) { e.x = 0; e.vx = Math.abs(e.vx); }
+                    if (e.x + e.width > GRID_COLS * TILE_SIZE) {
+                        e.x = GRID_COLS * TILE_SIZE - e.width;
+                        e.vx = -Math.abs(e.vx);
+                    }
+
+                    if (checkOverlap(player, e)) {
+                        if (player.vy > 0 && player.y + player.height - player.vy <= e.y + 7) {
+                            player.vy = -4;
+                            playSound('stomp');
+                            score += 200;
+                            if (e.type === 'koopa' && !e.isShell) {
+                                e.isShell = true;
+                                e.vx = 0;
+                            } else {
+                                e.alive = false;
+                            }
+                        } else if (e.isShell && Math.abs(e.vx) < 0.01) {
+                            e.vx = player.facingLeft ? -4 : 4;
+                            playSound('stomp');
+                        } else {
+                            hurtPlayer();
+                        }
+                    }
+                    continue;
+                }
+
+                if (e.type === 'thwomp') {
+                    // プレイヤーが「真下」に来たら即落下せず、少し警告時間を置く。
+                    // 横方向の重なりを外れた場合は待機をキャンセルする。
+                    const playerCenterX = player.x + player.width / 2;
+                    const thwompCenterX = e.x + e.width / 2;
+                    const directlyBelow = playerCenterX >= e.x - 4 && playerCenterX <= e.x + e.width + 4 &&
+                                          player.y >= e.y + e.height - 2;
+
+                    if (e.state === 'idle') {
+                        if (directlyBelow) {
+                            e.state = 'warning';
+                            e.warningTimer = 30; // 約0.5秒の予備動作
+                            e.vy = 0;
+                        }
+                    } else if (e.state === 'warning') {
+                        if (!directlyBelow) {
+                            e.state = 'idle';
+                            e.warningTimer = 0;
+                        } else {
+                            e.warningTimer--;
+                            if (e.warningTimer <= 0) {
+                                e.state = 'falling';
+                                e.vy = 0;
+                            }
+                        }
+                    } else if (e.state === 'falling') {
+                        e.vy = Math.min(e.vy + 0.4, 8);
+                        const hit = entitySolidCollision(e, 0, e.vy);
+                        if (hit.hitY) {
+                            e.state = 'rising';
+                            e.vy = 0;
+                        }
+                    } else if (e.state === 'rising') {
+                        e.y -= 0.5;
+                        if (e.y <= e.homeY) {
+                            e.y = e.homeY;
+                            e.state = 'idle';
+                            e.vy = 0;
+                            e.warningTimer = 0;
+                        }
+                    }
+                    if (checkOverlap(player, e)) hurtPlayer();
+                    continue;
+                }
+
+                if (e.type === 'bowser') {
+                    e.vy = Math.min((e.vy || 0) + 0.2, 6);
+                    if (Math.abs(e.vx) < 0.01) e.vx = -0.5;
+                    if (e.jumpTimer === undefined) e.jumpTimer = 0;
+                    e.jumpTimer++;
+                    if (e.grounded && e.jumpTimer > 150) {
+                        e.vy = -5;
+                        e.jumpTimer = 0;
+                    }
+                    const hit = entitySolidCollision(e, e.vx, e.vy);
+                    if (hit.hitX) e.vx = -e.vx;
+                    if (e.x < 0) { e.x = 0; e.vx = Math.abs(e.vx); }
+                    if (e.x + e.width > GRID_COLS * TILE_SIZE) {
+                        e.x = GRID_COLS * TILE_SIZE - e.width;
+                        e.vx = -Math.abs(e.vx);
+                    }
+                    if (checkOverlap(player, e)) {
+                        if (player.vy > 0 && player.y + player.height - player.vy <= e.y + 6) {
+                            player.vy = -4;
+                            e.hp--;
+                            score += 500;
+                            playSound('stomp');
+                            if (e.hp <= 0) {
+                                e.alive = false;
+                                score += 5000;
+                            }
+                        } else {
+                            hurtPlayer();
+                        }
+                    }
+                    continue;
+                }
+
+                if (e.type === 'fireball') {
+                    const oldX = e.x;
+                    const oldY = e.y;
+                    e.vy += 0.2;
+                    const hit = entitySolidCollision(e, e.vx, e.vy);
+
+                    if (hit.hitX) {
+                        e.alive = false;
+                        continue;
+                    }
+                    if (hit.hitY && e.y >= oldY) {
+                        e.vy = -3;
+                    }
+
+                    if (e.x < -32 || e.x > GRID_COLS * TILE_SIZE + 32 || e.y > GRID_ROWS * TILE_SIZE + 32) {
+                        e.alive = false;
+                        continue;
+                    }
+
+                    for (const target of entities) {
+                        if (!target.alive || target === e) continue;
+                        if (target.type === 'goomba' || target.type === 'koopa' || target.type === 'bowser') {
+                            if (checkOverlap(e, target)) {
+                                e.alive = false;
+                                playSound('stomp');
+                                if (target.type === 'bowser') {
+                                    target.hp--;
+                                    if (target.hp <= 0) target.alive = false;
+                                } else {
+                                    target.alive = false;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Remove dead entities after all interactions for this frame.
+            entities = entities.filter(e => e.alive);
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const colors = getThemeColors();
+            ctx.fillStyle = colors.sky;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const displayGrid = mode === 'PLAY' ? activeGrid : grid;
+
+            const startCol = Math.floor(cameraX / TILE_SIZE);
+            const endCol = Math.min(GRID_COLS, startCol + VIEW_COLS + 1);
+
+            for (let r = 0; r < GRID_ROWS; r++) {
+                for (let c = startCol; c < endCol; c++) {
+                    let tile = displayGrid[r][c];
+                    if (pSwitchActiveTimer > 0) {
+                        if (tile === TILE_BRICK) tile = TILE_COIN;
+                        else if (tile === TILE_COIN) tile = TILE_BRICK;
+                    }
+                    if (tile !== TILE_EMPTY) {
+                        drawTileSprite(ctx, tile, c * TILE_SIZE - cameraX, r * TILE_SIZE, TILE_SIZE);
+                    }
+                }
+            }
+
+            if (mode === 'EDIT') {
+                ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+                ctx.lineWidth = 1;
+                for (let c = startCol; c < endCol; c++) {
+                    ctx.beginPath();
+                    ctx.moveTo(c * TILE_SIZE - cameraX, 0);
+                    ctx.lineTo(c * TILE_SIZE - cameraX, canvas.height);
+                    ctx.stroke();
+                }
+                for (let r = 0; r <= GRID_ROWS; r++) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, r * TILE_SIZE);
+                    ctx.lineTo(canvas.width, r * TILE_SIZE);
+                    ctx.stroke();
+                }
+            }
+
+            if (mode === 'PLAY') {
+                entities.forEach(e => {
+                    if (e.alive) {
+                        const enemyDef = window.PIXEL_ENEMIES?.byType?.[e.type];
+                        const itemDef = window.PIXEL_ITEMS?.byType?.[e.type];
+                        if (enemyDef) drawTileSprite(ctx, enemyDef.tileId, e.x - cameraX, e.y, TILE_SIZE);
+                        else if (itemDef) drawTileSprite(ctx, itemDef.tileId, e.x - cameraX, e.y, TILE_SIZE);
+                        else if (e.type === 'fireball') {
+                            ctx.fillStyle = '#f97316';
+                            ctx.beginPath();
+                            ctx.arc(e.x + 4 - cameraX, e.y + 4, 4, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                    }
+                });
+
+                drawPlayerSprite(player);
+            }
+        }
+
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function setupEventListeners() {
+            window.addEventListener('keydown', e => {
+                if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+                    e.preventDefault();
+                }
+
+                keys[e.code] = true;
+
+                if (mode === 'PLAY' && (e.code === 'ShiftLeft' || e.code === 'KeyJ') && player.powerState === 2) {
+                    entities.push({
+                        type: 'fireball',
+                        x: player.facingLeft ? player.x - 4 : player.x + player.width,
+                        y: player.y + 4,
+                        vx: player.facingLeft ? -4 : 4,
+                        vy: 1,
+                        width: 8,
+                        height: 8,
+                        alive: true
+                    });
+                    playSound('fireball');
+                }
+            });
+
+            window.addEventListener('keyup', e => {
+                if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+                    e.preventDefault();
+                }
+                keys[e.code] = false;
+            });
+
+            function handleCanvasPointer(e) {
+                if (mode !== 'EDIT') return;
+                if (loadedCourseMeta && !loadedCourseMeta.isMine) {
+                    showToast('他人のコースは編集できません', '🔒');
+                    return;
+                }
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+
+                const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+                const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+                if (clientX === undefined || clientY === undefined) return;
+
+                const mouseX = (clientX - rect.left) * scaleX + cameraX;
+                const mouseY = (clientY - rect.top) * scaleY;
+
+                const c = Math.floor(mouseX / TILE_SIZE);
+                const r = Math.floor(mouseY / TILE_SIZE);
+
+                if (r >= 0 && r < GRID_ROWS && c >= 0 && c < GRID_COLS) {
+                    grid[r][c] = selectedTile;
+                    render();
+                }
+            }
+
+            canvas.addEventListener('mousedown', e => { isMouseDown = true; handleCanvasPointer(e); });
+            canvas.addEventListener('mousemove', e => { if (isMouseDown) handleCanvasPointer(e); });
+            window.addEventListener('mouseup', () => { isMouseDown = false; });
+
+            canvas.addEventListener('touchstart', e => { isMouseDown = true; handleCanvasPointer(e); });
+            canvas.addEventListener('touchmove', e => { if (isMouseDown) handleCanvasPointer(e); });
+            window.addEventListener('touchend', () => { isMouseDown = false; });
+
+            canvas.addEventListener('wheel', e => {
+                if (mode === 'EDIT') {
+                    e.preventDefault();
+                    scrollEditor(e.deltaY > 0 ? 32 : -32);
+                }
+            }, { passive: false });
+
+            const bindTouchBtn = (id, keyName) => {
+                const btn = document.getElementById(id);
+                if (!btn) return;
+                btn.addEventListener('touchstart', e => { e.preventDefault(); keys[keyName] = true; });
+                btn.addEventListener('touchend', e => { e.preventDefault(); keys[keyName] = false; });
+                btn.addEventListener('mousedown', () => { keys[keyName] = true; });
+                btn.addEventListener('mouseup', () => { keys[keyName] = false; });
+            };
+
+            bindTouchBtn('btn-left', 'ArrowLeft');
+            bindTouchBtn('btn-right', 'ArrowRight');
+            bindTouchBtn('btn-down', 'ArrowDown');
+            bindTouchBtn('btn-jump', 'Space');
+            bindTouchBtn('btn-fire', 'ShiftLeft');
+        }
+
+        window.downloadedPublicCourses = [];
+
+        function openPublishModal() {
+            document.getElementById('publish-modal').classList.remove('hidden');
+        }
+
+        function closePublishModal() {
+            document.getElementById('publish-modal').classList.add('hidden');
+        }
+
+        function openPublicBrowserModal() {
+            renderPublicCoursesList();
+            document.getElementById('public-browser-modal').classList.remove('hidden');
+        }
+
+        function closePublicBrowserModal() {
+            document.getElementById('public-browser-modal').classList.add('hidden');
+        }
+
+        function renderPublicCoursesList() {
+            const container = document.getElementById('public-courses-list');
+            if (!container) return;
+
+            const courses = window.downloadedPublicCourses || [];
+
+            if (courses.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-slate-500 text-xs flex flex-col items-center gap-2">
+                        <span>公開中のコースを探しています...</span>
+                        <button onclick="manualP2pSync()" class="text-teal-400 underline hover:text-teal-300">🔄 接続を再ロードする</button>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            courses.forEach((c) => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-900 border border-slate-700 hover:border-teal-500 p-3 rounded-lg flex justify-between items-center gap-3 transition-colors";
+                card.innerHTML = `
+                    <div class="flex flex-col gap-1 overflow-hidden">
+                        <div class="flex items-center gap-2">
+                            <span class="font-pixel text-xs text-yellow-400 truncate">${escapeHTML(c.title || '無題のコース')}</span>
+                            <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded border border-slate-700">${c.theme || 'overworld'}</span>
+                            <span class="text-[9px] bg-slate-800 text-emerald-400 px-1.5 py-0.5 rounded border border-slate-700 font-mono">${(c.data || '').length}B</span>
+                        </div>
+                        <div class="text-[11px] text-slate-400 flex items-center gap-3">
+                            <span>👤 作成者: <b class="text-slate-200">${escapeHTML(c.author || '名無し')}</b></span>
+                            <span>❤️ イイネ: ${c.likes || 0}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button onclick="likePublicCourse('${c.id}')" class="btn-retro text-xs px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-rose-400 rounded-lg border border-slate-700">❤️</button>
+                        <button onclick="loadPublicCourse('${c.id}')" class="btn-retro text-xs px-3 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-lg font-bold">▶ プレイ</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function escapeHTML(str) {
+            return String(str).replace(/[&<>"']/g, function(m) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+            });
+        }
+
+        function loadPublicCourse(id) {
+            const courses = window.downloadedPublicCourses || [];
+            const course = courses.find(item => item.id === id);
+            if (!course) return;
+            try {
+                const result = decodeLevelData(course.data);
+                grid = result.grid;
+                currentTheme = result.theme;
+                document.getElementById('theme-select').value = currentTheme;
+                
+                const myUid = window.getCurrentUserId ? window.getCurrentUserId() : null;
+                const isMine = !!(course.creatorUid && myUid && course.creatorUid === myUid);
+                
+                loadedCourseMeta = {
+                    id: course.id,
+                    title: course.title,
+                    author: course.author,
+                    isMine: isMine
+                };
+
+                closePublicBrowserModal();
+                setMode('PLAY');
+                showToast(`『${course.title}』を読み込みました！${isMine ? '' : ' (プレイ専用)'}`, '🎮');
+            } catch(e) {
+                showToast('コースの読み込みに失敗しました。', '❌');
+            }
+        }
+
+        window.onload = function() {
+            buildDefaultLevel();
+            setPaletteCategory('terrain');
+            setupEventListeners();
+            updateCameraScrollUI();
+            checkUrlCourseLoad();
+            gameLoop();
+        };
+    </script>
+
+    <script type="module">
+        // 改善されたP2Pメッシュ・ハブ同期システム
+        const ROOM_PREFIX = 'm_maker_p2p_slot_';
+        const NUM_ROOM_SLOTS = 5;
+        const MAX_COURSES = 50; // コースの最大保存数を50個に制限
+        let peer = null;
+        let p2pConnections = [];
+        let myPeerId = '';
+        
+        function getLocalPublicCourses() {
+            try {
+                return JSON.parse(localStorage.getItem('m_maker_public_courses') || '[]');
+            } catch(e) {
+                return [];
+            }
+        }
+
+        function saveLocalPublicCourses(courses) {
+            try {
+                localStorage.setItem('m_maker_public_courses', JSON.stringify(courses));
+            } catch(e) {}
+        }
+
+        /**
+         * コースリストを最大50個に制限・間引く関数
+         * 容量（データサイズ）が大きすぎず小さすぎない中間のコースを優先的に残し、
+         * 極端に大きい・小さいコースを新しいコースに入れ替えます。
+         */
+        function pruneCourses(courseList) {
+            if (!Array.isArray(courseList) || courseList.length <= MAX_COURSES) {
+                return courseList;
+            }
+
+            const myUid = window.getCurrentUserId ? window.getCurrentUserId() : null;
+
+            // 自分の作成したコースと他人のコースに分類（自分のコースは最優先保護）
+            const myCourses = [];
+            const othersCourses = [];
+
+            courseList.forEach(c => {
+                if (c.creatorUid && myUid && c.creatorUid === myUid) {
+                    myCourses.push(c);
+                } else {
+                    othersCourses.push(c);
+                }
+            });
+
+            // 自分のコースだけで上限を超える場合は最新のものを残す
+            if (myCourses.length >= MAX_COURSES) {
+                myCourses.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                return myCourses.slice(0, MAX_COURSES);
+            }
+
+            const allowedOthersCount = MAX_COURSES - myCourses.length;
+
+            if (othersCourses.length <= allowedOthersCount) {
+                return [...myCourses, ...othersCourses];
+            }
+
+            // 他人のコースのデータサイズの中央値(Median)を計算
+            const sizes = othersCourses.map(c => (c.data ? c.data.length : 0)).sort((a, b) => a - b);
+            const medianSize = sizes[Math.floor(sizes.length / 2)] || 0;
+
+            // 中央値との差（絶対値）が小さい順（＝中間のサイズに近い順）にソート
+            othersCourses.sort((a, b) => {
+                const lenA = a.data ? a.data.length : 0;
+                const lenB = b.data ? b.data.length : 0;
+                const diffA = Math.abs(lenA - medianSize);
+                const diffB = Math.abs(lenB - medianSize);
+
+                if (diffA !== diffB) {
+                    return diffA - diffB; // 中間に近いものを優先
+                }
+                // サイズ差が同じ場合は作成日時が新しい方を優先
+                return (b.createdAt || 0) - (a.createdAt || 0);
+            });
+
+            // 中間サイズ優先の他人のコース枠を選出
+            const selectedOthers = othersCourses.slice(0, allowedOthersCount);
+
+            return [...myCourses, ...selectedOthers];
+        }
+
+        function mergeIncomingCourses(incomingList) {
+            if (!Array.isArray(incomingList)) return false;
+            const current = getLocalPublicCourses();
+            let hasNew = false;
+
+            incomingList.forEach(inCourse => {
+                if (!inCourse || !inCourse.id) return;
+                const index = current.findIndex(c => c.id === inCourse.id);
+                if (index === -1) {
+                    current.push(inCourse);
+                    hasNew = true;
+                } else {
+                    if ((inCourse.likes || 0) > (current[index].likes || 0)) {
+                        current[index].likes = inCourse.likes;
+                        hasNew = true;
+                    }
+                }
+            });
+
+            if (hasNew) {
+                const pruned = pruneCourses(current);
+                saveLocalPublicCourses(pruned);
+                updateCoursesUI(pruned);
+            }
+            return hasNew;
+        }
+
+        function updateCoursesUI(courses) {
+            courses.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            window.downloadedPublicCourses = courses;
+
+            const badge = document.getElementById('public-badge');
+            if (badge) badge.innerText = courses.length;
+
+            renderPublicCoursesList();
+        }
+
+        function updatePeerCountUI() {
+            const countText = document.getElementById('p2p-count-text');
+            const dot = document.getElementById('p2p-dot');
+            if (countText) {
+                const count = p2pConnections.length;
+                if (count > 0) {
+                    countText.innerText = `P2P: ${count} ピア`;
+                    if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+                } else {
+                    countText.innerText = myPeerId ? `P2P待機中 (${myPeerId.replace(ROOM_PREFIX, 'スロット')})` : `ローカル同期`;
+                    if (dot) dot.className = "w-2 h-2 rounded-full bg-amber-500";
+                }
+            }
+        }
+
+        let broadcastChan = null;
+        try {
+            if (typeof BroadcastChannel !== 'undefined') {
+                broadcastChan = new BroadcastChannel('m_p2p_channel');
+                broadcastChan.onmessage = (event) => {
+                    if (event.data) handleIncomingMessage(event.data);
+                };
+            }
+        } catch(e) {}
+
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'm_p2p_broadcast_event' && e.newValue) {
+                try {
+                    const data = JSON.parse(e.newValue);
+                    handleIncomingMessage(data);
+                } catch(err) {}
+            }
+        });
+
+        function broadcastLocal(data) {
+            if (broadcastChan) {
+                try { broadcastChan.postMessage(data); } catch(e){}
+            }
+            try {
+                localStorage.setItem('m_p2p_broadcast_event', JSON.stringify({ ...data, _ts: Date.now() }));
+            } catch(e){}
+        }
+
+        function handleIncomingMessage(data, senderConn = null) {
+            if (!data) return;
+
+            if (data.type === 'SYNC_COURSES') {
+                const updated = mergeIncomingCourses(data.courses);
+                if (updated && senderConn && senderConn.open) {
+                    try {
+                        senderConn.send({
+                            type: 'SYNC_COURSES_REPLY',
+                            courses: getLocalPublicCourses()
+                        });
+                    } catch(e) {}
+                }
+            } else if (data.type === 'SYNC_COURSES_REPLY') {
+                mergeIncomingCourses(data.courses);
+            } else if (data.type === 'NEW_COURSE') {
+                mergeIncomingCourses([data.course]);
+                // Gossip protocol: Relay to other connected peers
+                p2pConnections.forEach(c => {
+                    if (c !== senderConn && c.open) {
+                        try { c.send(data); } catch(e){}
+                    }
+                });
+            } else if (data.type === 'LIKE_COURSE') {
+                const local = getLocalPublicCourses();
+                const target = local.find(c => c.id === data.courseId);
+                if (target) {
+                    target.likes = (target.likes || 0) + 1;
+                    const pruned = pruneCourses(local);
+                    saveLocalPublicCourses(pruned);
+                    updateCoursesUI(pruned);
+                }
+                p2pConnections.forEach(c => {
+                    if (c !== senderConn && c.open) {
+                        try { c.send(data); } catch(e){}
+                    }
+                });
+            }
+        }
+
+        function tryInitPeer(slotIndex = 0) {
+            const pruned = pruneCourses(getLocalPublicCourses());
+            saveLocalPublicCourses(pruned);
+            updateCoursesUI(pruned);
+
+            if (typeof Peer === 'undefined') {
+                updatePeerCountUI();
+                return;
+            }
+
+            let targetId = '';
+            if (slotIndex < NUM_ROOM_SLOTS) {
+                targetId = ROOM_PREFIX + slotIndex;
+            } else {
+                targetId = 'm_peer_' + Math.random().toString(36).substr(2, 9);
+            }
+
+            try {
+                if (peer && !peer.destroyed) {
+                    peer.destroy();
+                }
+            } catch(e) {}
+
+            try {
+                peer = new Peer(targetId, { debug: 0 });
+
+                peer.on('open', (id) => {
+                    myPeerId = id;
+                    console.log('P2P ID Registered:', id);
+                    connectToAllSlots();
+                    updatePeerCountUI();
+                });
+
+                peer.on('error', (err) => {
+                    if (err.type === 'unavailable-id' && slotIndex < NUM_ROOM_SLOTS) {
+                        // Slot occupied, try next room slot
+                        tryInitPeer(slotIndex + 1);
+                    } else {
+                        console.warn('P2P connection info:', err ? err.message : err);
+                        updatePeerCountUI();
+                    }
+                });
+
+                peer.on('connection', (conn) => {
+                    setupConnection(conn);
+                });
+            } catch (e) {
+                console.warn('PeerJS initialization fallback to local channel sync.', e);
+                updatePeerCountUI();
+            }
+        }
+
+        function connectToAllSlots() {
+            for (let i = 0; i < NUM_ROOM_SLOTS; i++) {
+                const targetId = ROOM_PREFIX + i;
+                if (targetId !== myPeerId) {
+                    connectToPeer(targetId);
+                }
+            }
+        }
+
+        function connectToPeer(targetId) {
+            if (!peer || peer.destroyed || !peer.open) return;
+            const alreadyConnected = p2pConnections.some(c => c.peer === targetId);
+            if (alreadyConnected) return;
+
+            try {
+                const conn = peer.connect(targetId, { reliable: true });
+                if (conn) setupConnection(conn);
+            } catch(e) {}
+        }
+
+        function setupConnection(conn) {
+            if (!conn) return;
+
+            conn.on('open', () => {
+                if (!p2pConnections.some(c => c.peer === conn.peer)) {
+                    p2pConnections.push(conn);
+                    updatePeerCountUI();
+                }
+                try {
+                    conn.send({
+                        type: 'SYNC_COURSES',
+                        courses: getLocalPublicCourses()
+                    });
+                } catch(e) {}
+            });
+
+            conn.on('data', (data) => {
+                handleIncomingMessage(data, conn);
+            });
+
+            const cleanup = () => {
+                p2pConnections = p2pConnections.filter(c => c !== conn && c.peer !== conn.peer);
+                updatePeerCountUI();
+            };
+
+            conn.on('close', cleanup);
+            conn.on('error', cleanup);
+        }
+
+        window.manualP2pSync = function() {
+            showToast("P2P再接続・コース同期を実行中...", "🔄");
+            connectToAllSlots();
+            broadcastLocal({
+                type: 'SYNC_COURSES',
+                courses: getLocalPublicCourses()
+            });
+            setTimeout(() => {
+                const pruned = pruneCourses(getLocalPublicCourses());
+                saveLocalPublicCourses(pruned);
+                updateCoursesUI(pruned);
+            }, 800);
+        };
+
+        window.getCurrentUserId = function() {
+            return myPeerId;
+        };
+
+        window.submitCoursePublish = async function() {
+            const titleInput = document.getElementById('publish-title');
+            const authorInput = document.getElementById('publish-author');
+            const statusText = document.getElementById('publish-status');
+
+            const title = titleInput.value.trim() || '無題のコース';
+            const author = authorInput.value.trim() || '名無し';
+            const encodedData = window.encodeLevelData();
+
+            statusText.classList.remove('hidden');
+
+            const courseData = {
+                id: 'course_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                title: title,
+                author: author,
+                theme: window.currentTheme || 'overworld',
+                data: encodedData,
+                likes: 0,
+                createdAt: Date.now(),
+                creatorUid: myPeerId
+            };
+
+            const localCourses = getLocalPublicCourses();
+            localCourses.push(courseData);
+            const pruned = pruneCourses(localCourses);
+            saveLocalPublicCourses(pruned);
+            updateCoursesUI(pruned);
+
+            broadcastLocal({
+                type: 'NEW_COURSE',
+                course: courseData
+            });
+
+            p2pConnections.forEach(conn => {
+                if (conn && conn.open) {
+                    try {
+                        conn.send({
+                            type: 'NEW_COURSE',
+                            course: courseData
+                        });
+                    } catch(e) {}
+                }
+            });
+
+            statusText.classList.add('hidden');
+            closePublishModal();
+            showToast("コースを公開・同期しました！", "🌐");
+            titleInput.value = '';
+        };
+
+        window.likePublicCourse = async function(id) {
+            const localCourses = getLocalPublicCourses();
+            const target = localCourses.find(c => c.id === id);
+            if (target) {
+                target.likes = (target.likes || 0) + 1;
+                const pruned = pruneCourses(localCourses);
+                saveLocalPublicCourses(pruned);
+                updateCoursesUI(pruned);
+
+                broadcastLocal({
+                    type: 'LIKE_COURSE',
+                    courseId: id
+                });
+
+                p2pConnections.forEach(conn => {
+                    if (conn && conn.open) {
+                        try {
+                            conn.send({
+                                type: 'LIKE_COURSE',
+                                courseId: id
+                            });
+                        } catch(e) {}
+                    }
+                });
+
+                showToast("イイネを送信しました！", "❤️");
+            }
+        };
+
+        // 定期的な再接続と同期 (15秒ごと)
+        setInterval(() => {
+            if (peer && peer.open) {
+                connectToAllSlots();
+            }
+        }, 15000);
+
+        tryInitPeer(0);
+    </script>
+</body>
+</html>
