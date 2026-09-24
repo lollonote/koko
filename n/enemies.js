@@ -1,36 +1,24 @@
-/* pixel_m / content/enemies.js
- * 全敵の定義をここにまとめます。
- * AI/物理エンジンは main の共通処理を使い、ここでは敵の種類・初期値を管理します。
+/* pixel_m / enemies.js
+ * 一度設定したら基本的に編集不要です。
+ * enemies/enemy_001.js ～ enemy_999.js を自動で読み込みます。
  */
 (function(){
-    const B = window.PIXEL_BLOCKS;
+  const B=window.PIXEL_BLOCKS;
+  const ENEMIES=[],byTile=Object.create(null),byType=Object.create(null);
 
-    const ENEMIES = [
-        {
-            key: 'GOOMBA', name: 'マシュボー', type: 'goomba', tileId: B.TILE_GOOMBA,
-            width: 14, height: 14,
-            create(c, r) { return { type:this.type, x:c*16, y:r*16, vx:-0.5, vy:0, width:this.width, height:this.height, alive:true }; }
-        },
-        {
-            key: 'KOOPA', name: 'カメカメ', type: 'koopa', tileId: B.TILE_KOOPA,
-            width: 14, height: 14,
-            create(c, r) { return { type:this.type, x:c*16, y:r*16, vx:-0.6, vy:0, width:this.width, height:this.height, isShell:false, alive:true }; }
-        },
-        {
-            key: 'THWOMP', name: 'ドスドス', type: 'thwomp', tileId: B.TILE_THWOMP,
-            width: 16, height: 16,
-            create(c, r) { return { type:this.type, x:c*16, y:r*16, homeY:r*16, vy:0, width:this.width, height:this.height, state:'idle', warningTimer:0, alive:true }; }
-        },
-        {
-            key: 'BOWSER', name: 'カメツヨ', type: 'bowser', tileId: B.TILE_BOWSER,
-            width: 16, height: 16,
-            create(c, r) { return { type:this.type, x:c*16, y:r*16, vx:-0.3, vy:0, width:this.width, height:this.height, hp:5, jumpTimer:0, alive:true }; }
-        }
-    ];
+  function registerEnemy(def){
+    if(!def || !def.name || !def.type) throw new Error("registerEnemy: name/type is required");
+    if(def.tileId==null) throw new Error("registerEnemy: tileId is required");
+    if(byTile[def.tileId] || byType[def.type]) throw new Error("Duplicate enemy: "+def.type);
+    const item=Object.assign({},def);
+    ENEMIES.push(item); byTile[item.tileId]=item; byType[item.type]=item;
+    return item;
+  }
 
-    const byTile = Object.create(null);
-    const byType = Object.create(null);
-    for (const def of ENEMIES) { byTile[def.tileId] = def; byType[def.type] = def; }
+  window.PIXEL_ENEMIES={ENEMIES,byTile,byType,registerEnemy,B};
 
-    window.PIXEL_ENEMIES = { ENEMIES, byTile, byType };
+  for(let i=1;i<=999;i++){
+    const n=String(i).padStart(3,"0");
+    document.write('<script src="./enemies/enemy_'+n+'.js"><\\/script>');
+  }
 })();
