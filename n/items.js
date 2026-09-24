@@ -1,38 +1,26 @@
-/*
- * PIXEL M - Item registry / plugin loader
- * 新しいアイテムは items/item_XXX.js を追加するだけ。
+/* pixel_m / content/items.js
+ * 全アイテムの定義をここにまとめます。
+ * プレイ中に生成されるアイテムもここで初期状態を管理します。
  */
 (function(){
     const B = window.PIXEL_BLOCKS;
-    const ITEMS = [];
+
+    const ITEMS = [
+        {
+            key:'MUSHROOM', name:'キノコ', type:'item_mushroom', tileId:B.TILE_MUSHROOM_ITEM,
+            width:14, height:14,
+            create(c,r) { return { type:this.type, x:c*16, y:r*16, vx:1, vy:0, width:this.width, height:this.height, alive:true }; }
+        },
+        {
+            key:'FIREFLOWER', name:'フラワー', type:'item_fireflower', tileId:B.TILE_FIREFLOWER_ITEM,
+            width:14, height:14,
+            create(c,r) { return { type:this.type, x:c*16, y:r*16, vx:0, vy:0, width:this.width, height:this.height, alive:true }; }
+        }
+    ];
+
     const byTile = Object.create(null);
     const byType = Object.create(null);
+    for (const def of ITEMS) { byTile[def.tileId] = def; byType[def.type] = def; }
 
-    function registerItem(def) {
-        if (!def || !def.name || !def.type) throw new Error('registerItem: name/type is required');
-        if (byType[def.type]) throw new Error(`Item type ${def.type} is already registered.`);
-
-        let tileId = def.tileId;
-        if (def.tile) {
-            tileId = B.registerTile(Object.assign({
-                id: tileId,
-                cat: 'items',
-                solid: false
-            }, def.tile));
-        }
-        if (tileId == null) throw new Error(`Item ${def.type} needs tileId or tile definition.`);
-
-        const normalized = Object.assign({ width:14, height:14, tileId }, def, { tileId });
-        ITEMS.push(normalized);
-        byTile[tileId] = normalized;
-        byType[normalized.type] = normalized;
-        return normalized;
-    }
-
-    window.PIXEL_ITEMS = { ITEMS, byTile, byType, registerItem, B };
-
-    for (let i = 1; i <= 64; i++) {
-        const n = String(i).padStart(3, '0');
-        document.write(`<script src="./items/item_${n}.js"><\/script>`);
-    }
+    window.PIXEL_ITEMS = { ITEMS, byTile, byType };
 })();
