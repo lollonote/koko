@@ -351,8 +351,6 @@
             facingLeft: false,
             powerState: 0,
             invulnerableTimer: 0,
-            // ⭐スター専用無敵。フレーム数ではなく実時間で管理する。
-            starInvincibleUntil: 0,
             climbing: false,
             alive: true
         };
@@ -780,9 +778,7 @@
         }
 
         function hurtPlayer() {
-            // 通常のダメージ無敵とスター無敵を完全に分離。
-            // performance.now() を使うため、FPSに左右されずスター取得から正確に10秒で終了する。
-            if (player.invulnerableTimer > 0 || performance.now() < player.starInvincibleUntil || !player.alive) return;
+            if (player.invulnerableTimer > 0 || !player.alive) return;
 
             if (player.powerState > 0) {
                 playSound('bump');
@@ -1428,29 +1424,6 @@
         function updateEntities() {
             for (const e of entities) {
                 if (!e.alive) continue;
-
-                // 外部プラグイン式アイテムの共通ライフサイクル。
-                // update / onPlayerTouch を持つアイテムは、個別ファイル側だけで動作を定義できます。
-                const customItemDef = window.PIXEL_ITEMS?.byType?.[e.type];
-                if (customItemDef && (customItemDef.update || customItemDef.onPlayerTouch)) {
-                    const api = {
-                        player,
-                        addScore(amount) {
-                            score += Number(amount) || 0;
-                        },
-                        playSound
-                    };
-
-                    if (typeof customItemDef.update === 'function') {
-                        customItemDef.update(e, api);
-                    }
-
-                    if (e.alive && typeof customItemDef.onPlayerTouch === 'function' && checkOverlap(player, e)) {
-                        customItemDef.onPlayerTouch(e, api);
-                    }
-
-                    continue;
-                }
 
                 // Items: they now use the same collision system as enemies,
                 // so they cannot randomly pass through floors/walls.
