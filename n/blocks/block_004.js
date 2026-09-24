@@ -1,72 +1,17 @@
+/* ➡️ ベルト（右） */
 (function(){
-    const I = window.PIXEL_ITEMS;
-
-    I.registerItem({
-        key: 'BELT_RIGHT',
-        name: 'ベルト右',
-        type: 'item_belt_right',
-        tileId: 1005,
-
-        tile: {
-            key: 'BELT_RIGHT',
-            name: '➡ ベルト右',
-            cat: 'items',
-            solid: true,
-
-            sprite(ctx, x, y, size) {
-                // ベース
-                ctx.fillStyle = '#334155';
-                ctx.fillRect(x, y, size, size);
-
-                // ベルト部分
-                ctx.fillStyle = '#64748b';
-                ctx.fillRect(
-                    x + 1,
-                    y + 3,
-                    size - 2,
-                    size - 6
-                );
-
-                // 矢印
-                ctx.fillStyle = '#22d3ee';
-
-                ctx.beginPath();
-                ctx.moveTo(x + 3, y + 8);
-                ctx.lineTo(x + 10, y + 8);
-                ctx.lineTo(x + 10, y + 5);
-                ctx.lineTo(x + 14, y + 8);
-                ctx.lineTo(x + 10, y + 11);
-                ctx.lineTo(x + 10, y + 9);
-                ctx.lineTo(x + 3, y + 9);
-                ctx.closePath();
-                ctx.fill();
-
-                // ローラー
-                ctx.fillStyle = '#0f172a';
-                ctx.fillRect(x + 1, y + 12, 3, 3);
-                ctx.fillRect(x + 12, y + 12, 3, 3);
-            },
-
-            onStep(player) {
-                // 右へ移動
-                player.x += 1.2;
-            }
-        },
-
-        create(c, r) {
-            return {
-                type: this.type,
-                x: c * 16,
-                y: r * 16,
-
-                vx: 0,
-                vy: 0,
-
-                width: 16,
-                height: 16,
-
-                alive: true
-            };
-        }
-    });
+ const B=window.PIXEL_BLOCKS;
+ if(!B)return;
+ B.registerTile({
+  id:1004,key:'BELT_RIGHT',name:'➡️ ベルト（右）',cat:'terrain',solid:true,
+  sprite(ctx,x,y,size){
+   ctx.fillStyle='#26364a';ctx.fillRect(x,y,size,size);
+   ctx.fillStyle='#38bdf8';ctx.fillRect(x+1,y+size*.3,size-2,size*.4);
+   ctx.fillStyle='#e0f2fe';
+   const s=Math.floor(performance.now()/180)%2,cy=y+size*.5;
+   for(let i=-1;i<2;i++){const ax=x+size*(.25+i*.34)+s*size*.1;ctx.beginPath();ctx.moveTo(ax-size*.1,cy-size*.14);ctx.lineTo(ax+size*.1,cy);ctx.lineTo(ax-size*.1,cy+size*.14);ctx.closePath();ctx.fill();}
+   ctx.strokeStyle='#0ea5e9';ctx.strokeRect(x+.5,y+.5,size-1,size-1);
+  },
+  onStep(player){player.x+=1.2;}
+ });
 })();
