@@ -1,26 +1,24 @@
-/* pixel_m / content/items.js
- * 全アイテムの定義をここにまとめます。
- * プレイ中に生成されるアイテムもここで初期状態を管理します。
+/* pixel_m / items.js
+ * 一度設定したら基本的に編集不要です。
+ * items/item_001.js ～ item_999.js を自動で読み込みます。
  */
 (function(){
-    const B = window.PIXEL_BLOCKS;
+  const B=window.PIXEL_BLOCKS;
+  const ITEMS=[],byTile=Object.create(null),byType=Object.create(null);
 
-    const ITEMS = [
-        {
-            key:'MUSHROOM', name:'キノコ', type:'item_mushroom', tileId:B.TILE_MUSHROOM_ITEM,
-            width:14, height:14,
-            create(c,r) { return { type:this.type, x:c*16, y:r*16, vx:1, vy:0, width:this.width, height:this.height, alive:true }; }
-        },
-        {
-            key:'FIREFLOWER', name:'フラワー', type:'item_fireflower', tileId:B.TILE_FIREFLOWER_ITEM,
-            width:14, height:14,
-            create(c,r) { return { type:this.type, x:c*16, y:r*16, vx:0, vy:0, width:this.width, height:this.height, alive:true }; }
-        }
-    ];
+  function registerItem(def){
+    if(!def || !def.name || !def.type) throw new Error("registerItem: name/type is required");
+    if(def.tileId==null) throw new Error("registerItem: tileId is required");
+    if(byTile[def.tileId] || byType[def.type]) throw new Error("Duplicate item: "+def.type);
+    const item=Object.assign({},def);
+    ITEMS.push(item); byTile[item.tileId]=item; byType[item.type]=item;
+    return item;
+  }
 
-    const byTile = Object.create(null);
-    const byType = Object.create(null);
-    for (const def of ITEMS) { byTile[def.tileId] = def; byType[def.type] = def; }
+  window.PIXEL_ITEMS={ITEMS,byTile,byType,registerItem,B};
 
-    window.PIXEL_ITEMS = { ITEMS, byTile, byType };
+  for(let i=1;i<=999;i++){
+    const n=String(i).padStart(3,"0");
+    document.write('<script src="./items/item_'+n+'.js"><\\/script>');
+  }
 })();
