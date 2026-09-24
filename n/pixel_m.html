@@ -239,19 +239,6 @@
             TILE_DEFS, registerTile, PALETTE_ITEMS
         } = window.PIXEL_BLOCKS;
 
-        // 外部プラグインから安全にゲームへアクセスするための共通API。
-        window.PIXEL_GAME_API = {
-            get player(){ return player; },
-            get entities(){ return entities; },
-            addScore(n){ score += Number(n) || 0; },
-            addCoins(n){ coins += Number(n) || 0; },
-            playSound,
-            hurtPlayer,
-            setPlayerPower,
-            removeEntity(e){ if(e) e.alive = false; },
-            overlap: checkOverlap
-        };
-
         let mode = 'EDIT';
         let currentCategory = 'terrain';
         let selectedTile = TILE_GROUND;
@@ -364,6 +351,8 @@
             facingLeft: false,
             powerState: 0,
             invulnerableTimer: 0,
+            // ⭐スター専用無敵。フレーム数ではなく実時間で管理する。
+            starInvincibleUntil: 0,
             climbing: false,
             alive: true
         };
@@ -791,7 +780,9 @@
         }
 
         function hurtPlayer() {
-            if (player.invulnerableTimer > 0 || !player.alive) return;
+            // 通常のダメージ無敵とスター無敵を完全に分離。
+            // performance.now() を使うため、FPSに左右されずスター取得から正確に10秒で終了する。
+            if (player.invulnerableTimer > 0 || performance.now() < player.starInvincibleUntil || !player.alive) return;
 
             if (player.powerState > 0) {
                 playSound('bump');
@@ -1438,17 +1429,27 @@
             for (const e of entities) {
                 if (!e.alive) continue;
 
-                // 新規プラグイン用の汎用フック。
-                // update() が true を返した場合、このフレームの旧式処理は行いません。
-                const pluginDef = window.PIXEL_ENEMIES?.byType?.[e.type] || window.PIXEL_ITEMS?.byType?.[e.type];
-                if (pluginDef?.update) {
-                    const handled = pluginDef.update(e, window.PIXEL_GAME_API);
-                    if (handled !== false) {
-                        if (pluginDef.onPlayerTouch && e.alive && checkOverlap(player, e)) {
-                            pluginDef.onPlayerTouch(e, window.PIXEL_GAME_API);
-                        }
-                        continue;
+                // 外部プラグイン式アイテムの共通ライフサイクル。
+                // update / onPlayerTouch を持つアイテムは、個別ファイル側だけで動作を定義できます。
+                const customItemDef = window.PIXEL_ITEMS?.byType?.[e.type];
+                if (customItemDef && (customItemDef.update || customItemDef.onPlayerTouch)) {
+                    const api = {
+                        player,
+                        addScore(amount) {
+                            score += Number(amount) || 0;
+                        },
+                        playSound
+                    };
+
+                    if (typeof customItemDef.update === 'function') {
+                        customItemDef.update(e, api);
                     }
+
+                    if (e.alive && typeof customItemDef.onPlayerTouch === 'function' && checkOverlap(player, e)) {
+                        customItemDef.onPlayerTouch(e, api);
+                    }
+
+                    continue;
                 }
 
                 // Items: they now use the same collision system as enemies,
