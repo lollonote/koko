@@ -1008,61 +1008,61 @@ async function playGame(game) {
 init();
 
 </script>
+
 <!-- 移動可能な固定リンクボタン -->
 <div id="floating-link-btn" style="
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 999999;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: #007aff;
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-  cursor: move;
-  user-select: none;
-  touch-action: none;
-  font-family: sans-serif;
-  font-size: 12px;
-  font-weight: bold;
-  text-decoration: none;
-  transition: transform 0.1s ease;
+  position: fixed !important;
+  top: 20px !important;
+  right: 20px !important;
+  z-index: 9999999 !important;
+  width: 50px !important;
+  height: 50px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #007aff, #00d2ff) !important;
+  color: #ffffff !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 4px 15px rgba(0,210,255,0.5) !important;
+  cursor: grab !important;
+  user-select: none !important;
+  touch-action: none !important;
+  font-family: sans-serif !important;
+  font-size: 13px !important;
+  font-weight: bold !important;
+  text-decoration: none !important;
+  transform: translate(0, 0) !important;
 ">
-  <!-- 表示したい文字やアイコン -->
   Link
 </div>
 
 <script>
 (function() {
   const btn = document.getElementById('floating-link-btn');
-  // 遷移先のURLを指定（同一タブで移動）
   const targetUrl = 'https://koko008.vercel.app/m/pixel_m.html'; 
 
   let isDragging = false;
   let hasDragged = false;
   let startX, startY, initialLeft, initialTop;
 
-  // 初期位置をpx指定に固定
-  const rect = btn.getBoundingClientRect();
-  btn.style.left = rect.left + 'px';
-  btn.style.top = rect.top + 'px';
-  btn.style.right = 'auto';
-
-  // ドラッグ開始（マウス・タッチ共通）
   function startDrag(e) {
     isDragging = true;
     hasDragged = false;
+
+    const rect = btn.getBoundingClientRect();
+    initialLeft = rect.left;
+    initialTop = rect.top;
+    
+    btn.style.left = initialLeft + 'px';
+    btn.style.top = initialTop + 'px';
+    btn.style.right = 'auto';
+    btn.style.cursor = 'grabbing';
+
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     
     startX = clientX;
     startY = clientY;
-    initialLeft = btn.offsetLeft;
-    initialTop = btn.offsetTop;
 
     document.addEventListener('mousemove', onDrag);
     document.addEventListener('touchmove', onDrag, { passive: false });
@@ -1070,7 +1070,6 @@ init();
     document.addEventListener('touchend', stopDrag);
   }
 
-  // ドラッグ中
   function onDrag(e) {
     if (!isDragging) return;
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -1079,29 +1078,27 @@ init();
     const dx = clientX - startX;
     const dy = clientY - startY;
 
-    // わずかでも動いたらドラッグと判定（クリック動作と区別）
     if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
       hasDragged = true;
-      e.preventDefault(); // スクロール等の防止
+      if (e.cancelable) e.preventDefault();
     }
 
     btn.style.left = (initialLeft + dx) + 'px';
     btn.style.top = (initialTop + dy) + 'px';
   }
 
-  // ドラッグ終了
   function stopDrag() {
     isDragging = false;
+    btn.style.cursor = 'grab';
     document.removeEventListener('mousemove', onDrag);
     document.removeEventListener('touchmove', onDrag);
     document.removeEventListener('mouseup', stopDrag);
     document.removeEventListener('touchend', stopDrag);
   }
 
-  // ボタンクリック時の挙動（ドラッグしていなければ同一タブで遷移）
   btn.addEventListener('click', function(e) {
     if (!hasDragged) {
-      window.location.href = targetUrl; // 同一タブ（同じ窓）で遷移
+      window.location.href = targetUrl;
     }
   });
 
