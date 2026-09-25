@@ -10,18 +10,18 @@
         const TILE_QUESTION = 3;
         const TILE_HARD = 4;
         const TILE_NOTE = 5;
-        const TILE_DONUT = 6;
+        const TILE_FALLING = 6;
         const TILE_COIN = 7;
         const TILE_PIPE = 8;
         const TILE_VINE = 9;
-        const TILE_PSWITCH = 10;
+        const TILE_SWITCHSWITCH = 10;
         const TILE_TRAMPOLINE = 11;
         const TILE_SPIKE = 12;
         const TILE_LAVA = 13;
-        const TILE_GOOMBA = 14;
-        const TILE_KOOPA = 15;
-        const TILE_THWOMP = 16;
-        const TILE_BOWSER = 17;
+        const TILE_WALKER = 14;
+        const TILE_SHELL = 15;
+        const TILE_STOMPER = 16;
+        const TILE_BOSS = 17;
         const TILE_START = 18;
         const TILE_GOAL = 19;
         const TILE_MUSHROOM_ITEM = 20;
@@ -74,19 +74,19 @@
             [TILE_BRICK, 'レンガ', 'terrain', true],
             [TILE_QUESTION, '❓(コイン)', 'terrain', true],
             [TILE_HARD, '石ブロック', 'terrain', true],
-            [TILE_NOTE, '音符ブロック', 'terrain', true],
-            [TILE_DONUT, 'ドナツ', 'terrain', true],
+            [TILE_NOTE, '音ブロック', 'terrain', true],
+            [TILE_FALLING, '落ちる床', 'terrain', true],
             [TILE_COIN, 'コイン', 'items', false],
             [TILE_PIPE, '土管', 'terrain', true],
             [TILE_VINE, 'ツタ', 'terrain', false],
-            [TILE_PSWITCH, 'Pスイッチ', 'items', false],
+            [TILE_SWITCHSWITCH, 'スイッチスイッチ', 'items', false],
             [TILE_TRAMPOLINE, 'ジャンプ台', 'items', true],
             [TILE_SPIKE, 'トゲ', 'enemies', false],
             [TILE_LAVA, '溶岩', 'enemies', false],
-            [TILE_GOOMBA, 'マシュボー', 'enemies', false],
-            [TILE_KOOPA, 'カメカメ', 'enemies', false],
-            [TILE_THWOMP, 'ドスドス', 'enemies', false],
-            [TILE_BOWSER, 'カメツヨ', 'enemies', false],
+            [TILE_WALKER, 'テコヤツ', 'enemies', false],
+            [TILE_SHELL, 'カメカメ', 'enemies', false],
+            [TILE_STOMPER, 'ゴンゴン', 'enemies', false],
+            [TILE_BOSS, 'ドンカメ', 'enemies', false],
             [TILE_START, 'スタート', 'items', false],
             [TILE_GOAL, 'ゴール', 'items', false],
             [TILE_MUSHROOM_ITEM, 'キノコ', 'items', false],
@@ -123,7 +123,7 @@
          * ================================================================ */
 registerTile({
     key: 'ICE_BLOCK',
-    name: '氷ブロック',
+    name: '氷ブロック(機能なし)',
     cat: 'terrain',
     solid: true,
 
@@ -140,9 +140,9 @@ registerTile({
 
 
     window.PIXEL_BLOCKS = {
-        TILE_EMPTY, TILE_GROUND, TILE_BRICK, TILE_QUESTION, TILE_HARD, TILE_NOTE, TILE_DONUT,
-        TILE_COIN, TILE_PIPE, TILE_VINE, TILE_PSWITCH, TILE_TRAMPOLINE, TILE_SPIKE, TILE_LAVA,
-        TILE_GOOMBA, TILE_KOOPA, TILE_THWOMP, TILE_BOWSER, TILE_START, TILE_GOAL,
+        TILE_EMPTY, TILE_GROUND, TILE_BRICK, TILE_QUESTION, TILE_HARD, TILE_NOTE, TILE_DONUT: TILE_FALLING,
+        TILE_COIN, TILE_PIPE, TILE_VINE, TILE_PSWITCH: TILE_SWITCHSWITCH, TILE_TRAMPOLINE, TILE_SPIKE, TILE_LAVA,
+        TILE_GOOMBA: TILE_WALKER, TILE_KOOPA: TILE_SHELL, TILE_THWOMP: TILE_STOMPER, TILE_BOWSER: TILE_BOSS, TILE_START, TILE_GOAL,
         TILE_MUSHROOM_ITEM, TILE_FIREFLOWER_ITEM, TILE_QUESTION_MUSHROOM, TILE_QUESTION_FIRE, TILE_EMPTY_BLOCK,
         TILE_DEFS, registerTile, PALETTE_ITEMS
     };
