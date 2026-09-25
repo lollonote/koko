@@ -12,7 +12,7 @@
             create(c,r) { return { type:this.type, x:c*16, y:r*16, vx:1, vy:0, width:this.width, height:this.height, alive:true }; }
         },
         {
-            key:'FIREFLOWER', name:'フラワー', type:'item_fireflower', tileId:B.TILE_FIREFLOWER_ITEM,
+            key:'FLOWER', name:'フラワー', type:'item_fireflower', tileId:B.TILE_FIREFLOWER_ITEM,
             width:14, height:14,
             create(c,r) { return { type:this.type, x:c*16, y:r*16, vx:0, vy:0, width:this.width, height:this.height, alive:true }; }
         }
