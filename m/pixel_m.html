@@ -6,7 +6,6 @@
     <title>Super Pixel M Maker Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -68,9 +67,9 @@
 
             <button onclick="openPublishModal()" class="btn-retro text-xs px-2.5 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg border border-purple-400 flex items-center gap-1 font-bold">🌐 公開</button>
             <button onclick="openPublicBrowserModal()" class="btn-retro text-xs px-2.5 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-lg border border-teal-400 flex items-center gap-1 font-bold">🌍 みんなのコース <span id="public-badge" class="bg-teal-900 text-teal-200 text-[10px] px-1.5 py-0.5 rounded-full ml-1">0</span></button>
-            <div id="p2p-status-badge" class="text-[10px] px-2 py-1 bg-slate-900 text-slate-400 rounded-lg border border-slate-700 flex items-center gap-1 cursor-pointer" onclick="manualP2pSync()" title="クリックして手動再接続">
+            <div id="p2p-status-badge" class="text-[10px] px-2 py-1 bg-slate-900 text-slate-400 rounded-lg border border-slate-700 flex items-center gap-1 cursor-pointer" onclick="manualP2pSync()" title="クリックしてFirebaseから再読み込み">
                 <span id="p2p-dot" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                <span id="p2p-count-text">P2P: 0 ピア</span>
+                <span id="p2p-count-text">Firebase: 接続中...</span>
             </div>
 
             <select id="theme-select" onchange="changeTheme(this.value)" class="bg-slate-900 border border-slate-600 text-slate-200 text-xs rounded-lg px-2 py-1.5 focus:ring-yellow-400 focus:border-yellow-400">
@@ -181,11 +180,11 @@
             <div class="flex flex-col gap-2 text-xs">
                 <div>
                     <label class="text-slate-400 block mb-1">コース名:</label>
-                    <input type="text" id="publish-title" placeholder="例: 魔王城の大脱出" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-purple-400">
+                    <input type="text" id="publish-title" placeholder="例: クッパ城の大脱出" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-purple-400">
                 </div>
                 <div>
                     <label class="text-slate-400 block mb-1">作者名:</label>
-                    <input type="text" id="publish-author" placeholder="例: ゲームファン" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-purple-400">
+                    <input type="text" id="publish-author" placeholder="例: 魔王" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-purple-400">
                 </div>
             </div>
             <div id="publish-status" class="text-xs text-yellow-400 hidden">送信中...</div>
@@ -205,7 +204,7 @@
                     <button onclick="closePublicBrowserModal()" class="text-slate-400 hover:text-white font-bold text-sm px-2">✕</button>
                 </div>
             </div>
-            <p class="text-xs text-slate-400">他プレイヤーが公開したコースです。（最大50個自動受信・入れ替え）</p>
+            <p class="text-xs text-slate-400">他プレイヤーが公開したコース（最大50個を自動保持・入れ替え）です。</p>
             
             <div id="public-courses-list" class="flex flex-col gap-2 overflow-y-auto max-h-[55vh] pr-1">
                 <!-- Populated dynamically -->
@@ -218,9 +217,6 @@
         <span id="toast-text" class="text-xs font-semibold">メッセージ</span>
     </div>
 
-    <script src="./blocks.js"></script>
-    <script src="./enemies.js"></script>
-    <script src="./items.js"></script>
     <script>
         const GRID_COLS = 120;
         const GRID_ROWS = 16;
@@ -230,14 +226,59 @@
 
         let cameraX = 0;
 
-        // 外部コンテンツファイルからタイル定義を読み込みます。
-        const {
-            TILE_EMPTY, TILE_GROUND, TILE_BRICK, TILE_QUESTION, TILE_HARD, TILE_NOTE, TILE_DONUT,
-            TILE_COIN, TILE_PIPE, TILE_VINE, TILE_PSWITCH, TILE_TRAMPOLINE, TILE_SPIKE, TILE_LAVA,
-            TILE_GOOMBA, TILE_KOOPA, TILE_THWOMP, TILE_BOWSER, TILE_START, TILE_GOAL,
-            TILE_MUSHROOM_ITEM, TILE_FIREFLOWER_ITEM, TILE_QUESTION_MUSHROOM, TILE_QUESTION_FIRE, TILE_EMPTY_BLOCK,
-            TILE_DEFS, registerTile, PALETTE_ITEMS
-        } = window.PIXEL_BLOCKS;
+        // Tile Identifiers
+        const TILE_EMPTY = 0;
+        const TILE_GROUND = 1;
+        const TILE_BRICK = 2;
+        const TILE_QUESTION = 3;
+        const TILE_HARD = 4;
+        const TILE_NOTE = 5;
+        const TILE_DONUT = 6;
+        const TILE_COIN = 7;
+        const TILE_PIPE = 8;
+        const TILE_VINE = 9;
+        const TILE_PSWITCH = 10;
+        const TILE_TRAMPOLINE = 11;
+        const TILE_SPIKE = 12;
+        const TILE_LAVA = 13;
+        const TILE_GOOMBA = 14;
+        const TILE_KOOPA = 15;
+        const TILE_THWOMP = 16;
+        const TILE_BOWSER = 17;
+        const TILE_START = 18;
+        const TILE_GOAL = 19;
+        const TILE_MUSHROOM_ITEM = 20;
+        const TILE_FIREFLOWER_ITEM = 21;
+        const TILE_QUESTION_MUSHROOM = 22;
+        const TILE_QUESTION_FIRE = 23;
+        const TILE_EMPTY_BLOCK = 24;
+
+        const PALETTE_ITEMS = [
+            { id: TILE_GROUND, name: '地面', cat: 'terrain' },
+            { id: TILE_BRICK, name: 'レンガ', cat: 'terrain' },
+            { id: TILE_HARD, name: '石ブロック', cat: 'terrain' },
+            { id: TILE_QUESTION, name: '❓(コイン)', cat: 'terrain' },
+            { id: TILE_QUESTION_MUSHROOM, name: '❓(キノコ)', cat: 'terrain' },
+            { id: TILE_QUESTION_FIRE, name: '❓(フラワー)', cat: 'terrain' },
+            { id: TILE_NOTE, name: '音符ブロック', cat: 'terrain' },
+            { id: TILE_DONUT, name: 'ドナツ', cat: 'terrain' },
+            { id: TILE_PIPE, name: '土管', cat: 'terrain' },
+            { id: TILE_VINE, name: 'ツタ', cat: 'terrain' },
+            { id: TILE_COIN, name: 'コイン', cat: 'items' },
+            { id: TILE_MUSHROOM_ITEM, name: 'キノコ', cat: 'items' },
+            { id: TILE_FIREFLOWER_ITEM, name: 'フラワー', cat: 'items' },
+            { id: TILE_PSWITCH, name: 'Pスイッチ', cat: 'items' },
+            { id: TILE_TRAMPOLINE, name: 'ジャンプ台', cat: 'items' },
+            { id: TILE_START, name: 'スタート', cat: 'items' },
+            { id: TILE_GOAL, name: 'ゴール', cat: 'items' },
+            { id: TILE_GOOMBA, name: 'マシュボー', cat: 'enemies' },
+            { id: TILE_KOOPA, name: 'カメカメ', cat: 'enemies' },
+            { id: TILE_THWOMP, name: 'ドスドス', cat: 'enemies' },
+            { id: TILE_BOWSER, name: 'カメツヨ', cat: 'enemies' },
+            { id: TILE_SPIKE, name: 'トゲ', cat: 'enemies' },
+            { id: TILE_LAVA, name: '溶岩', cat: 'enemies' },
+            { id: TILE_EMPTY, name: '消しゴム', cat: 'terrain' }
+        ];
 
         let mode = 'EDIT';
         let currentCategory = 'terrain';
@@ -382,14 +423,6 @@
         }
 
         function drawTileSprite(cCtx, type, x, y, size) {
-            const customDef = TILE_DEFS[type];
-            if (customDef && customDef.sprite) {
-                cCtx.save();
-                customDef.sprite(cCtx, x, y, size);
-                cCtx.restore();
-                return;
-            }
-
             const colors = getThemeColors();
             cCtx.save();
             cCtx.translate(x, y);
@@ -676,12 +709,6 @@
             ctx.restore();
         }
 
-        // 開発用：登録済みタイルの一覧を取得できます。
-        // 例: console.log(getTileRegistry())
-        function getTileRegistry() {
-            return Object.values(TILE_DEFS).map(({ id, key, name, cat, solid }) => ({ id, key, name, cat, solid }));
-        }
-
         function setPaletteCategory(cat) {
             currentCategory = cat;
             ['terrain', 'items', 'enemies'].forEach(c => {
@@ -824,17 +851,24 @@
                     if (tile === TILE_START) {
                         startX = c * TILE_SIZE;
                         startY = (r - 1) * TILE_SIZE;
-                    } else {
-                        // 敵・アイテムの初期状態は外部ファイルで管理します。
-                        const enemyDef = window.PIXEL_ENEMIES?.byTile?.[tile];
-                        const itemDef = window.PIXEL_ITEMS?.byTile?.[tile];
-                        if (enemyDef) {
-                            entities.push(enemyDef.create(c, r));
-                            activeGrid[r][c] = TILE_EMPTY;
-                        } else if (itemDef) {
-                            entities.push(itemDef.create(c, r));
-                            activeGrid[r][c] = TILE_EMPTY;
-                        }
+                    } else if (tile === TILE_GOOMBA) {
+                        entities.push({ type: 'goomba', x: c * TILE_SIZE, y: r * TILE_SIZE, vx: -0.5, vy: 0, width: 14, height: 14, alive: true });
+                        activeGrid[r][c] = TILE_EMPTY;
+                    } else if (tile === TILE_KOOPA) {
+                        entities.push({ type: 'koopa', x: c * TILE_SIZE, y: r * TILE_SIZE, vx: -0.6, vy: 0, width: 14, height: 14, isShell: false, alive: true });
+                        activeGrid[r][c] = TILE_EMPTY;
+                    } else if (tile === TILE_THWOMP) {
+                        entities.push({ type: 'thwomp', x: c * TILE_SIZE, y: r * TILE_SIZE, homeY: r * TILE_SIZE, vy: 0, width: 16, height: 16, state: 'idle', alive: true });
+                        activeGrid[r][c] = TILE_EMPTY;
+                    } else if (tile === TILE_BOWSER) {
+                        entities.push({ type: 'bowser', x: c * TILE_SIZE, y: r * TILE_SIZE, vx: -0.3, vy: 0, width: 16, height: 16, hp: 5, jumpTimer: 0, alive: true });
+                        activeGrid[r][c] = TILE_EMPTY;
+                    } else if (tile === TILE_MUSHROOM_ITEM) {
+                        entities.push({ type: 'item_mushroom', x: c * TILE_SIZE, y: r * TILE_SIZE, vx: 1, vy: 0, width: 14, height: 14, alive: true });
+                        activeGrid[r][c] = TILE_EMPTY;
+                    } else if (tile === TILE_FIREFLOWER_ITEM) {
+                        entities.push({ type: 'item_fireflower', x: c * TILE_SIZE, y: r * TILE_SIZE, vx: 0, vy: 0, width: 14, height: 14, alive: true });
+                        activeGrid[r][c] = TILE_EMPTY;
                     }
                 }
             }
@@ -924,58 +958,28 @@
         }
 
         function encodeLevelData() {
-            // M2: JSON + Base64。タイルIDを1文字に限定しないため、
-            // 25個を超える新規タイルを追加しても保存できます。
-            // 旧M1コードは decodeLevelData() で引き続き読み込めます。
-            const payload = JSON.stringify({
-                version: 2,
-                theme: currentTheme,
-                rows: GRID_ROWS,
-                cols: GRID_COLS,
-                grid
-            });
-            const bytes = new TextEncoder().encode(payload);
-            let binary = '';
-            const chunk = 0x8000;
-            for (let i = 0; i < bytes.length; i += chunk) {
-                binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+            const flat = grid.flat();
+            let rle = "";
+            let currentChar = String.fromCharCode(97 + flat[0]);
+            let count = 0;
+
+            for (let i = 0; i < flat.length; i++) {
+                const char = String.fromCharCode(97 + flat[i]);
+                if (char === currentChar) {
+                    count++;
+                } else {
+                    rle += currentChar + (count > 1 ? count : "");
+                    currentChar = char;
+                    count = 1;
+                }
             }
-            return `M2:${btoa(binary)}`;
+            rle += currentChar + (count > 1 ? count : "");
+            return `M1:${currentTheme}:${rle}`;
         }
 
         function decodeLevelData(str) {
-            str = String(str || '').trim();
-
-            // 新形式 M2
-            if (str.startsWith('M2:')) {
-                try {
-                    const binary = atob(str.slice(3));
-                    const bytes = Uint8Array.from(binary, ch => ch.charCodeAt(0));
-                    const payload = JSON.parse(new TextDecoder().decode(bytes));
-                    const theme = payload.theme || 'overworld';
-                    const sourceGrid = Array.isArray(payload.grid) ? payload.grid : [];
-                    const newGrid = Array(GRID_ROWS).fill(0).map(() => Array(GRID_COLS).fill(TILE_EMPTY));
-                    for (let r = 0; r < Math.min(GRID_ROWS, sourceGrid.length); r++) {
-                        if (!Array.isArray(sourceGrid[r])) continue;
-                        for (let c = 0; c < Math.min(GRID_COLS, sourceGrid[r].length); c++) {
-                            const id = Number(sourceGrid[r][c]);
-                            newGrid[r][c] = Number.isInteger(id) && TILE_DEFS[id] ? id : TILE_EMPTY;
-                        }
-                    }
-                    return { grid: newGrid, theme };
-                } catch (e) {
-                    console.error('M2 decode failed:', e);
-                    showToast('コースデータが壊れています', '⚠️');
-                    return {
-                        grid: Array(GRID_ROWS).fill(0).map(() => Array(GRID_COLS).fill(TILE_EMPTY)),
-                        theme: 'overworld'
-                    };
-                }
-            }
-
-            // 旧形式 M1
             let theme = 'overworld';
-            let rle = str;
+            let rle = str.trim();
 
             if (str.startsWith('M1:')) {
                 const parts = str.split(':');
@@ -989,14 +993,16 @@
             while ((match = regex.exec(rle)) !== null) {
                 const tileId = match[1].charCodeAt(0) - 97;
                 const count = match[2] ? parseInt(match[2], 10) : 1;
-                for (let i = 0; i < count; i++) flat.push(tileId);
+                for (let i = 0; i < count; i++) {
+                    flat.push(tileId);
+                }
             }
 
             const newGrid = Array(GRID_ROWS).fill(0).map(() => Array(GRID_COLS).fill(TILE_EMPTY));
             for (let i = 0; i < Math.min(flat.length, GRID_ROWS * GRID_COLS); i++) {
                 const r = Math.floor(i / GRID_COLS);
                 const c = i % GRID_COLS;
-                newGrid[r][c] = TILE_DEFS[flat[i]] ? flat[i] : TILE_EMPTY;
+                newGrid[r][c] = flat[i];
             }
             return { grid: newGrid, theme };
         }
@@ -1110,88 +1116,14 @@
             showToast('ステージをまっさらな状態に初期化しました。', '🗑️');
         }
 
-        // Pスイッチ中は「見た目」だけでなく、実際の当たり判定も入れ替える。
-        // 元の地面/レンガをコイン化したものは本物のコインとして取得可能、
-        // 元々コインだった場所はレンガ化して足場になる。
-        function getGameplayTile(r, c) {
-            if (r < 0 || r >= GRID_ROWS || c < 0 || c >= GRID_COLS) return TILE_HARD;
-            const tile = activeGrid[r][c];
-            if (pSwitchActiveTimer > 0) {
-                if (tile === TILE_BRICK) return TILE_COIN;
-                if (tile === TILE_COIN) return TILE_BRICK;
-            }
-            return tile;
-        }
-
         function isSolidTile(tile) {
-            // 新規タイルは registry の solid だけで当たり判定が決まります。
-            // 既存タイルも同じ値を登録済みなので、従来挙動を維持します。
-            return !!TILE_DEFS[tile]?.solid;
-        }
-
-        function getTileAtRect(rect, includeOutside = false) {
-            const hits = [];
-            const left = Math.floor(rect.x / TILE_SIZE);
-            const right = Math.floor((rect.x + rect.width - 0.001) / TILE_SIZE);
-            const top = Math.floor(rect.y / TILE_SIZE);
-            const bottom = Math.floor((rect.y + rect.height - 0.001) / TILE_SIZE);
-
-            for (let r = top; r <= bottom; r++) {
-                for (let c = left; c <= right; c++) {
-                    if (r < 0 || r >= GRID_ROWS || c < 0 || c >= GRID_COLS) {
-                        if (includeOutside) hits.push({ r, c, tile: TILE_HARD });
-                        continue;
-                    }
-                    hits.push({ r, c, tile: getGameplayTile(r, c) });
-                }
+            if (pSwitchActiveTimer > 0) {
+                if (tile === TILE_COIN) return true;
+                if (tile === TILE_BRICK) return false;
             }
-            return hits;
-        }
-
-        function entitySolidCollision(e, dx, dy) {
-            const next = { x: e.x + dx, y: e.y + dy, width: e.width, height: e.height };
-            let hitX = false;
-            let hitY = false;
-
-            // Horizontal collision first.
-            const hRect = { x: next.x, y: e.y, width: e.width, height: e.height };
-            for (const h of getTileAtRect(hRect)) {
-                if (isSolidTile(h.tile)) {
-                    const tx = h.c * TILE_SIZE;
-                    if (dx > 0) {
-                        e.x = tx - e.width;
-                    } else if (dx < 0) {
-                        e.x = tx + TILE_SIZE;
-                    }
-                    e.vx = -e.vx || 0;
-                    hitX = true;
-                    break;
-                }
-            }
-            if (!hitX) e.x = next.x;
-
-            // Vertical collision.
-            const vRect = { x: e.x, y: next.y, width: e.width, height: e.height };
-            for (const h of getTileAtRect(vRect)) {
-                if (isSolidTile(h.tile)) {
-                    const ty = h.r * TILE_SIZE;
-                    if (dy > 0) {
-                        e.y = ty - e.height;
-                        e.vy = 0;
-                        e.grounded = true;
-                    } else if (dy < 0) {
-                        e.y = ty + TILE_SIZE;
-                        e.vy = Math.abs(e.vy || 0) * 0.35;
-                    }
-                    hitY = true;
-                    break;
-                }
-            }
-            if (!hitY) {
-                e.y = next.y;
-                e.grounded = false;
-            }
-            return { hitX, hitY };
+            return tile === TILE_GROUND || tile === TILE_BRICK || tile === TILE_HARD ||
+                   tile === TILE_QUESTION || tile === TILE_QUESTION_MUSHROOM || tile === TILE_QUESTION_FIRE ||
+                   tile === TILE_EMPTY_BLOCK || tile === TILE_PIPE || tile === TILE_NOTE || tile === TILE_DONUT;
         }
 
         function update() {
@@ -1200,17 +1132,18 @@
             if (player.invulnerableTimer > 0) player.invulnerableTimer--;
             if (pSwitchActiveTimer > 0) pSwitchActiveTimer--;
 
-            // P-switch timer expiry restores normal visual/state automatically.
             let touchingVine = false;
             const startCol = Math.floor(player.x / TILE_SIZE);
-            const endCol = Math.floor((player.x + player.width - 0.001) / TILE_SIZE);
+            const endCol = Math.floor((player.x + player.width) / TILE_SIZE);
             const startRow = Math.floor(player.y / TILE_SIZE);
-            const endRow = Math.floor((player.y + player.height - 0.001) / TILE_SIZE);
+            const endRow = Math.floor((player.y + player.height) / TILE_SIZE);
 
             for (let r = startRow; r <= endRow; r++) {
                 for (let c = startCol; c <= endCol; c++) {
                     if (r >= 0 && r < GRID_ROWS && c >= 0 && c < GRID_COLS) {
-                        if (activeGrid[r][c] === TILE_VINE) touchingVine = true;
+                        if (activeGrid[r][c] === TILE_VINE) {
+                            touchingVine = true;
+                        }
                     }
                 }
             }
@@ -1254,16 +1187,7 @@
                 if (player.vy > 6) player.vy = 6;
             }
 
-            // Prevent the player from escaping the level horizontally.
             player.x += player.vx;
-            if (player.x < 0) {
-                player.x = 0;
-                player.vx = 0;
-            }
-            if (player.x + player.width > GRID_COLS * TILE_SIZE) {
-                player.x = GRID_COLS * TILE_SIZE - player.width;
-                player.vx = 0;
-            }
             resolveCollisions('horizontal');
 
             player.y += player.vy;
@@ -1277,110 +1201,56 @@
                 hurtPlayer();
             }
 
-            // Timed donut platforms.
-            for (const key in donutTimers) {
-                donutTimers[key]--;
-                if (donutTimers[key] <= 0) {
-                    const [r, c] = key.split(',').map(Number);
-                    if (activeGrid[r] && activeGrid[r][c] === TILE_DONUT) {
-                        activeGrid[r][c] = TILE_EMPTY;
-                    }
-                    delete donutTimers[key];
-                }
-            }
-
             updateEntities();
             updateHUD();
         }
 
         function resolveCollisions(direction) {
             const startCol = Math.floor(player.x / TILE_SIZE);
-            const endCol = Math.floor((player.x + player.width - 0.001) / TILE_SIZE);
+            const endCol = Math.floor((player.x + player.width) / TILE_SIZE);
             const startRow = Math.floor(player.y / TILE_SIZE);
-            const endRow = Math.floor((player.y + player.height - 0.001) / TILE_SIZE);
+            const endRow = Math.floor((player.y + player.height) / TILE_SIZE);
 
             for (let r = startRow; r <= endRow; r++) {
                 for (let c = startCol; c <= endCol; c++) {
                     if (r < 0 || r >= GRID_ROWS || c < 0 || c >= GRID_COLS) continue;
-                    const tile = getGameplayTile(r, c);
-                    const tileRect = { x: c * TILE_SIZE, y: r * TILE_SIZE, width: TILE_SIZE, height: TILE_SIZE };
-                    const pRect = { x: player.x, y: player.y, width: player.width, height: player.height };
+                    const tile = activeGrid[r][c];
 
-                    if (!checkOverlap(pRect, tileRect)) continue;
-
-                    // Registry に登録した新規タイルの汎用タッチ処理。
-                    const tileDef = TILE_DEFS[tile];
-                    if (tileDef?.onTouch) {
-                        tileDef.onTouch(player, { r, c, tile, rect: tileRect, direction });
-                    }
-
-                    // Collectible coin. Pスイッチ中はレンガ→コインになったものもここに入る。
-                    if (tile === TILE_COIN) {
+                    if (tile === TILE_COIN && pSwitchActiveTimer === 0) {
                         activeGrid[r][c] = TILE_EMPTY;
                         coins++;
                         score += 100;
                         playSound('coin');
                         continue;
                     }
-
                     if (tile === TILE_GOAL) {
                         triggerWin();
                         return;
                     }
-
                     if (tile === TILE_SPIKE || tile === TILE_LAVA) {
                         hurtPlayer();
                         return;
                     }
 
-                    if (tile === TILE_PSWITCH) {
-                        activeGrid[r][c] = TILE_EMPTY;
-                        pSwitchActiveTimer = 600;
-                        score += 500;
-                        playSound('coin');
-                        continue;
-                    }
-
-                    // Special jump platforms.
-                    if (direction === 'vertical' && player.vy >= 0 &&
-                        (tile === TILE_TRAMPOLINE || tile === TILE_NOTE)) {
-                        player.y = tileRect.y - player.height;
-                        player.vy = tile === TILE_TRAMPOLINE ? -8 : -6.5;
-                        player.grounded = false;
-                        playSound('jump');
-                        continue;
-                    }
-
-                    // Donut platform starts falling after being stood on.
-                    if (direction === 'vertical' && player.vy >= 0 && tile === TILE_DONUT) {
-                        player.y = tileRect.y - player.height;
-                        player.vy = 0;
-                        player.grounded = true;
-                        const key = `${r},${c}`;
-                        if (!donutTimers[key]) donutTimers[key] = 45;
-                        continue;
-                    }
-
                     if (isSolidTile(tile)) {
-                        if (direction === 'horizontal') {
-                            if (player.vx > 0) player.x = tileRect.x - player.width;
-                            else if (player.vx < 0) player.x = tileRect.x + tileRect.width;
-                            player.vx = 0;
-                        } else if (direction === 'vertical') {
-                            if (player.vy > 0) {
-                                player.y = tileRect.y - player.height;
-                                player.vy = 0;
-                                player.grounded = true;
-                                if (tileDef?.onStep) {
-                                    tileDef.onStep(player, { r, c, tile, rect: tileRect });
+                        const tileRect = { x: c * TILE_SIZE, y: r * TILE_SIZE, width: TILE_SIZE, height: TILE_SIZE };
+                        const pRect = { x: player.x, y: player.y, width: player.width, height: player.height };
+
+                        if (checkOverlap(pRect, tileRect)) {
+                            if (direction === 'horizontal') {
+                                if (player.vx > 0) player.x = tileRect.x - player.width;
+                                else if (player.vx < 0) player.x = tileRect.x + tileRect.width;
+                                player.vx = 0;
+                            } else if (direction === 'vertical') {
+                                if (player.vy > 0) {
+                                    player.y = tileRect.y - player.height;
+                                    player.vy = 0;
+                                    player.grounded = true;
+                                } else if (player.vy < 0) {
+                                    player.y = tileRect.y + tileRect.height;
+                                    player.vy = 0;
+                                    hitBlock(r, c, tile);
                                 }
-                            } else if (player.vy < 0) {
-                                player.y = tileRect.y + tileRect.height;
-                                player.vy = 0;
-                                if (tileDef?.onHeadHit) {
-                                    tileDef.onHeadHit(player, { r, c, tile, rect: tileRect });
-                                }
-                                hitBlock(r, c, tile);
                             }
                         }
                     }
@@ -1396,17 +1266,11 @@
                 playSound('coin');
             } else if (tile === TILE_QUESTION_MUSHROOM) {
                 activeGrid[r][c] = TILE_EMPTY_BLOCK;
-                entities.push({
-                    type: 'item_mushroom', x: c * TILE_SIZE, y: (r - 1) * TILE_SIZE,
-                    vx: 1, vy: 0, width: 14, height: 14, grounded: false, alive: true
-                });
+                entities.push({ type: 'item_mushroom', x: c * TILE_SIZE, y: (r - 1) * TILE_SIZE, vx: 1, vy: 0, width: 14, height: 14, alive: true });
                 playSound('powerup');
             } else if (tile === TILE_QUESTION_FIRE) {
                 activeGrid[r][c] = TILE_EMPTY_BLOCK;
-                entities.push({
-                    type: 'item_fireflower', x: c * TILE_SIZE, y: (r - 1) * TILE_SIZE,
-                    vx: 0, vy: 0, width: 14, height: 14, grounded: false, alive: true
-                });
+                entities.push({ type: 'item_fireflower', x: c * TILE_SIZE, y: (r - 1) * TILE_SIZE, vx: 0, vy: 0, width: 14, height: 14, alive: true });
                 playSound('powerup');
             } else if (tile === TILE_BRICK) {
                 if (player.powerState > 0) {
@@ -1422,58 +1286,51 @@
         }
 
         function updateEntities() {
-            for (const e of entities) {
-                if (!e.alive) continue;
+            entities.forEach(e => {
+                if (!e.alive) return;
 
-                // Items: they now use the same collision system as enemies,
-                // so they cannot randomly pass through floors/walls.
                 if (e.type === 'item_mushroom' || e.type === 'item_fireflower') {
-                    e.vy = Math.min((e.vy || 0) + 0.2, 6);
-                    if (e.type === 'item_mushroom' && Math.abs(e.vx) < 0.01) e.vx = 1;
+                    e.vy = (e.vy || 0) + 0.2;
+                    e.x += e.vx;
+                    e.y += e.vy;
 
-                    const hit = entitySolidCollision(e, e.vx, e.vy);
-                    if (hit.hitX && e.type === 'item_mushroom') e.vx = e.vx || 1;
-
-                    // Keep items inside the playable area.
-                    if (e.x < 0) { e.x = 0; e.vx = Math.abs(e.vx || 1); }
-                    if (e.x + e.width > GRID_COLS * TILE_SIZE) {
-                        e.x = GRID_COLS * TILE_SIZE - e.width;
-                        e.vx = -Math.abs(e.vx || 1);
-                    }
-                    if (e.y > GRID_ROWS * TILE_SIZE + 32) {
-                        e.y = 0;
+                    const r = Math.floor((e.y + e.height) / TILE_SIZE);
+                    const c = Math.floor((e.x + e.width / 2) / TILE_SIZE);
+                    if (r >= 0 && r < GRID_ROWS && c >= 0 && c < GRID_COLS && isSolidTile(activeGrid[r][c])) {
+                        e.y = r * TILE_SIZE - e.height;
                         e.vy = 0;
                     }
 
                     if (checkOverlap(player, e)) {
                         e.alive = false;
-                        if (e.type === 'item_mushroom') setPlayerPower(Math.max(1, player.powerState));
-                        else setPlayerPower(2);
+                        if (e.type === 'item_mushroom') {
+                            setPlayerPower(Math.max(1, player.powerState));
+                        } else {
+                            setPlayerPower(2);
+                        }
                         score += 1000;
                         playSound('powerup');
                     }
-                    continue;
-                }
+                } else if (e.type === 'goomba' || e.type === 'koopa') {
+                    e.vy = (e.vy || 0) + 0.2;
+                    e.x += e.vx;
 
-                if (e.type === 'goomba' || e.type === 'koopa') {
-                    e.vy = Math.min((e.vy || 0) + 0.2, 6);
-                    if (e.isShell && Math.abs(e.vx) < 0.01) {
-                        e.vx = 0;
-                    } else if (Math.abs(e.vx) < 0.01) {
-                        e.vx = e.type === 'goomba' ? -0.5 : -0.6;
+                    const checkC = Math.floor((e.x + (e.vx > 0 ? e.width : 0)) / TILE_SIZE);
+                    const checkR = Math.floor((e.y + e.height / 2) / TILE_SIZE);
+                    if (checkR >= 0 && checkR < GRID_ROWS && checkC >= 0 && checkC < GRID_COLS && isSolidTile(activeGrid[checkR][checkC])) {
+                        e.vx *= -1;
                     }
 
-                    const hit = entitySolidCollision(e, e.vx, e.vy);
-                    if (hit.hitX && !e.isShell) e.vx = -e.vx;
-
-                    if (e.x < 0) { e.x = 0; e.vx = Math.abs(e.vx); }
-                    if (e.x + e.width > GRID_COLS * TILE_SIZE) {
-                        e.x = GRID_COLS * TILE_SIZE - e.width;
-                        e.vx = -Math.abs(e.vx);
+                    e.y += e.vy;
+                    const r = Math.floor((e.y + e.height) / TILE_SIZE);
+                    const c = Math.floor((e.x + e.width / 2) / TILE_SIZE);
+                    if (r >= 0 && r < GRID_ROWS && c >= 0 && c < GRID_COLS && isSolidTile(activeGrid[r][c])) {
+                        e.y = r * TILE_SIZE - e.height;
+                        e.vy = 0;
                     }
 
                     if (checkOverlap(player, e)) {
-                        if (player.vy > 0 && player.y + player.height - player.vy <= e.y + 7) {
+                        if (player.vy > 0 && player.y + player.height - player.vy <= e.y + 6) {
                             player.vy = -4;
                             playSound('stomp');
                             score += 200;
@@ -1483,116 +1340,54 @@
                             } else {
                                 e.alive = false;
                             }
-                        } else if (e.isShell && Math.abs(e.vx) < 0.01) {
-                            e.vx = player.facingLeft ? -4 : 4;
-                            playSound('stomp');
                         } else {
-                            hurtPlayer();
-                        }
-                    }
-                    continue;
-                }
-
-                if (e.type === 'thwomp') {
-                    // プレイヤーが「真下」に来たら即落下せず、少し警告時間を置く。
-                    // 横方向の重なりを外れた場合は待機をキャンセルする。
-                    const playerCenterX = player.x + player.width / 2;
-                    const thwompCenterX = e.x + e.width / 2;
-                    const directlyBelow = playerCenterX >= e.x - 4 && playerCenterX <= e.x + e.width + 4 &&
-                                          player.y >= e.y + e.height - 2;
-
-                    if (e.state === 'idle') {
-                        if (directlyBelow) {
-                            e.state = 'warning';
-                            e.warningTimer = 30; // 約0.5秒の予備動作
-                            e.vy = 0;
-                        }
-                    } else if (e.state === 'warning') {
-                        if (!directlyBelow) {
-                            e.state = 'idle';
-                            e.warningTimer = 0;
-                        } else {
-                            e.warningTimer--;
-                            if (e.warningTimer <= 0) {
-                                e.state = 'falling';
-                                e.vy = 0;
+                            if (e.isShell && e.vx === 0) {
+                                e.vx = player.facingLeft ? -4 : 4;
+                                playSound('stomp');
+                            } else {
+                                hurtPlayer();
                             }
                         }
-                    } else if (e.state === 'falling') {
-                        e.vy = Math.min(e.vy + 0.4, 8);
-                        const hit = entitySolidCollision(e, 0, e.vy);
-                        if (hit.hitY) {
-                            e.state = 'rising';
+                    }
+                } else if (e.type === 'thwomp') {
+                    const distToPlayer = Math.abs((player.x + player.width / 2) - (e.x + e.width / 2));
+                    if (e.state === 'idle' && distToPlayer < 48 && player.y > e.y) {
+                        e.state = 'falling';
+                    }
+                    if (e.state === 'falling') {
+                        e.vy += 0.4;
+                        e.y += e.vy;
+                        const r = Math.floor((e.y + e.height) / TILE_SIZE);
+                        const c = Math.floor((e.x + e.width / 2) / TILE_SIZE);
+                        if (r >= 0 && r < GRID_ROWS && c >= 0 && c < GRID_COLS && isSolidTile(activeGrid[r][c])) {
+                            e.y = r * TILE_SIZE - e.height;
                             e.vy = 0;
+                            e.state = 'rising';
                         }
                     } else if (e.state === 'rising') {
                         e.y -= 0.5;
                         if (e.y <= e.homeY) {
                             e.y = e.homeY;
                             e.state = 'idle';
-                            e.vy = 0;
-                            e.warningTimer = 0;
                         }
                     }
-                    if (checkOverlap(player, e)) hurtPlayer();
-                    continue;
-                }
 
-                if (e.type === 'bowser') {
-                    e.vy = Math.min((e.vy || 0) + 0.2, 6);
-                    if (Math.abs(e.vx) < 0.01) e.vx = -0.5;
-                    if (e.jumpTimer === undefined) e.jumpTimer = 0;
-                    e.jumpTimer++;
-                    if (e.grounded && e.jumpTimer > 150) {
-                        e.vy = -5;
-                        e.jumpTimer = 0;
-                    }
-                    const hit = entitySolidCollision(e, e.vx, e.vy);
-                    if (hit.hitX) e.vx = -e.vx;
-                    if (e.x < 0) { e.x = 0; e.vx = Math.abs(e.vx); }
-                    if (e.x + e.width > GRID_COLS * TILE_SIZE) {
-                        e.x = GRID_COLS * TILE_SIZE - e.width;
-                        e.vx = -Math.abs(e.vx);
-                    }
                     if (checkOverlap(player, e)) {
-                        if (player.vy > 0 && player.y + player.height - player.vy <= e.y + 6) {
-                            player.vy = -4;
-                            e.hp--;
-                            score += 500;
-                            playSound('stomp');
-                            if (e.hp <= 0) {
-                                e.alive = false;
-                                score += 5000;
-                            }
-                        } else {
-                            hurtPlayer();
-                        }
+                        hurtPlayer();
                     }
-                    continue;
-                }
-
-                if (e.type === 'fireball') {
-                    const oldX = e.x;
-                    const oldY = e.y;
+                } else if (e.type === 'fireball') {
+                    e.x += e.vx;
+                    e.y += e.vy;
                     e.vy += 0.2;
-                    const hit = entitySolidCollision(e, e.vx, e.vy);
 
-                    if (hit.hitX) {
-                        e.alive = false;
-                        continue;
-                    }
-                    if (hit.hitY && e.y >= oldY) {
+                    const r = Math.floor((e.y + e.height) / TILE_SIZE);
+                    const c = Math.floor((e.x + e.width / 2) / TILE_SIZE);
+                    if (r >= 0 && r < GRID_ROWS && c >= 0 && c < GRID_COLS && isSolidTile(activeGrid[r][c])) {
                         e.vy = -3;
                     }
 
-                    if (e.x < -32 || e.x > GRID_COLS * TILE_SIZE + 32 || e.y > GRID_ROWS * TILE_SIZE + 32) {
-                        e.alive = false;
-                        continue;
-                    }
-
-                    for (const target of entities) {
-                        if (!target.alive || target === e) continue;
-                        if (target.type === 'goomba' || target.type === 'koopa' || target.type === 'bowser') {
+                    entities.forEach(target => {
+                        if (target.alive && (target.type === 'goomba' || target.type === 'koopa' || target.type === 'bowser')) {
                             if (checkOverlap(e, target)) {
                                 e.alive = false;
                                 playSound('stomp');
@@ -1602,15 +1397,11 @@
                                 } else {
                                     target.alive = false;
                                 }
-                                break;
                             }
                         }
-                    }
+                    });
                 }
-            }
-
-            // Remove dead entities after all interactions for this frame.
-            entities = entities.filter(e => e.alive);
+            });
         }
 
         function render() {
@@ -1658,10 +1449,12 @@
             if (mode === 'PLAY') {
                 entities.forEach(e => {
                     if (e.alive) {
-                        const enemyDef = window.PIXEL_ENEMIES?.byType?.[e.type];
-                        const itemDef = window.PIXEL_ITEMS?.byType?.[e.type];
-                        if (enemyDef) drawTileSprite(ctx, enemyDef.tileId, e.x - cameraX, e.y, TILE_SIZE);
-                        else if (itemDef) drawTileSprite(ctx, itemDef.tileId, e.x - cameraX, e.y, TILE_SIZE);
+                        if (e.type === 'item_mushroom') drawTileSprite(ctx, TILE_MUSHROOM_ITEM, e.x - cameraX, e.y, TILE_SIZE);
+                        else if (e.type === 'item_fireflower') drawTileSprite(ctx, TILE_FIREFLOWER_ITEM, e.x - cameraX, e.y, TILE_SIZE);
+                        else if (e.type === 'goomba') drawTileSprite(ctx, TILE_GOOMBA, e.x - cameraX, e.y, TILE_SIZE);
+                        else if (e.type === 'koopa') drawTileSprite(ctx, TILE_KOOPA, e.x - cameraX, e.y, TILE_SIZE);
+                        else if (e.type === 'thwomp') drawTileSprite(ctx, TILE_THWOMP, e.x - cameraX, e.y, TILE_SIZE);
+                        else if (e.type === 'bowser') drawTileSprite(ctx, TILE_BOWSER, e.x - cameraX, e.y, TILE_SIZE);
                         else if (e.type === 'fireball') {
                             ctx.fillStyle = '#f97316';
                             ctx.beginPath();
@@ -1873,327 +1666,232 @@
     </script>
 
     <script type="module">
-        // 改善されたP2Pメッシュ・ハブ同期システム
-        const ROOM_PREFIX = 'm_maker_p2p_slot_';
-        const NUM_ROOM_SLOTS = 5;
-        const MAX_COURSES = 50; // コースの最大保存数を50個に制限
-        let peer = null;
-        let p2pConnections = [];
-        let myPeerId = '';
-        
-        function getLocalPublicCourses() {
+        // ============================================================
+        // Firebase テスト版
+        // 公開コースの保存・読み込み・イイネをFirebase Realtime Databaseへ移行
+        // blocks.js / enemies.js / items.js は変更不要
+        // ============================================================
+
+        import { initializeApp }
+            from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+        import {
+            getAuth,
+            signInAnonymously,
+            onAuthStateChanged
+        } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+        import {
+            getDatabase,
+            ref,
+            push,
+            set,
+            onValue,
+            runTransaction
+        } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
+
+        // ------------------------------------------------------------
+        // Firebase設定
+        // ------------------------------------------------------------
+        const firebaseConfig = {
+            apiKey: "AIzaSyBCzRsdpJXef5q9KhSy1F1tYkZl_J89oC0",
+            authDomain: "m-pix-a64cb.firebaseapp.com",
+            projectId: "m-pix-a64cb",
+            storageBucket: "m-pix-a64cb.firebasestorage.app",
+            messagingSenderId: "529454903196",
+            appId: "1:529454903196:web:510deac1a5e4dd0afca259",
+            measurementId: "G-9J2VP9GVWQ"
+
+            // Realtime DatabaseのURLが必要な環境では、Firebaseコンソール
+            // 「Realtime Database → データ」に表示されるURLを
+            // databaseURL: "https://xxxxx.firebasedatabase.app"
+            // の形でここに追加してください。
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        let db = null;
+        let firebaseUser = null;
+        let firebaseReady = false;
+        let firebaseReadyResolve;
+        let firebaseReadyReject;
+
+        const firebaseReadyPromise = new Promise((resolve, reject) => {
+            firebaseReadyResolve = resolve;
+            firebaseReadyReject = reject;
+        });
+
+        const MAX_DISPLAY_COURSES = 50;
+        const LOCAL_CACHE_KEY = 'm_maker_firebase_courses_cache';
+
+        function setFirebaseStatus(textValue, color = 'amber') {
+            const text = document.getElementById('p2p-count-text');
+            const dot = document.getElementById('p2p-dot');
+
+            if (text) text.innerText = textValue;
+
+            if (dot) {
+                if (color === 'green') {
+                    dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+                } else if (color === 'red') {
+                    dot.className = "w-2 h-2 rounded-full bg-red-500";
+                } else {
+                    dot.className = "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
+                }
+            }
+        }
+
+        function getCachedCourses() {
             try {
-                return JSON.parse(localStorage.getItem('m_maker_public_courses') || '[]');
-            } catch(e) {
+                const raw = localStorage.getItem(LOCAL_CACHE_KEY);
+                const parsed = JSON.parse(raw || '[]');
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
                 return [];
             }
         }
 
-        function saveLocalPublicCourses(courses) {
+        function saveCachedCourses(courses) {
             try {
-                localStorage.setItem('m_maker_public_courses', JSON.stringify(courses));
-            } catch(e) {}
-        }
-
-        /**
-         * コースリストを最大50個に制限・間引く関数
-         * 容量（データサイズ）が大きすぎず小さすぎない中間のコースを優先的に残し、
-         * 極端に大きい・小さいコースを新しいコースに入れ替えます。
-         */
-        function pruneCourses(courseList) {
-            if (!Array.isArray(courseList) || courseList.length <= MAX_COURSES) {
-                return courseList;
-            }
-
-            const myUid = window.getCurrentUserId ? window.getCurrentUserId() : null;
-
-            // 自分の作成したコースと他人のコースに分類（自分のコースは最優先保護）
-            const myCourses = [];
-            const othersCourses = [];
-
-            courseList.forEach(c => {
-                if (c.creatorUid && myUid && c.creatorUid === myUid) {
-                    myCourses.push(c);
-                } else {
-                    othersCourses.push(c);
-                }
-            });
-
-            // 自分のコースだけで上限を超える場合は最新のものを残す
-            if (myCourses.length >= MAX_COURSES) {
-                myCourses.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-                return myCourses.slice(0, MAX_COURSES);
-            }
-
-            const allowedOthersCount = MAX_COURSES - myCourses.length;
-
-            if (othersCourses.length <= allowedOthersCount) {
-                return [...myCourses, ...othersCourses];
-            }
-
-            // 他人のコースのデータサイズの中央値(Median)を計算
-            const sizes = othersCourses.map(c => (c.data ? c.data.length : 0)).sort((a, b) => a - b);
-            const medianSize = sizes[Math.floor(sizes.length / 2)] || 0;
-
-            // 中央値との差（絶対値）が小さい順（＝中間のサイズに近い順）にソート
-            othersCourses.sort((a, b) => {
-                const lenA = a.data ? a.data.length : 0;
-                const lenB = b.data ? b.data.length : 0;
-                const diffA = Math.abs(lenA - medianSize);
-                const diffB = Math.abs(lenB - medianSize);
-
-                if (diffA !== diffB) {
-                    return diffA - diffB; // 中間に近いものを優先
-                }
-                // サイズ差が同じ場合は作成日時が新しい方を優先
-                return (b.createdAt || 0) - (a.createdAt || 0);
-            });
-
-            // 中間サイズ優先の他人のコース枠を選出
-            const selectedOthers = othersCourses.slice(0, allowedOthersCount);
-
-            return [...myCourses, ...selectedOthers];
-        }
-
-        function mergeIncomingCourses(incomingList) {
-            if (!Array.isArray(incomingList)) return false;
-            const current = getLocalPublicCourses();
-            let hasNew = false;
-
-            incomingList.forEach(inCourse => {
-                if (!inCourse || !inCourse.id) return;
-                const index = current.findIndex(c => c.id === inCourse.id);
-                if (index === -1) {
-                    current.push(inCourse);
-                    hasNew = true;
-                } else {
-                    if ((inCourse.likes || 0) > (current[index].likes || 0)) {
-                        current[index].likes = inCourse.likes;
-                        hasNew = true;
-                    }
-                }
-            });
-
-            if (hasNew) {
-                const pruned = pruneCourses(current);
-                saveLocalPublicCourses(pruned);
-                updateCoursesUI(pruned);
-            }
-            return hasNew;
+                localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(courses));
+            } catch (e) {}
         }
 
         function updateCoursesUI(courses) {
-            courses.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-            window.downloadedPublicCourses = courses;
+            const sorted = Array.isArray(courses)
+                ? courses
+                    .filter(c => c && c.id)
+                    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+                    .slice(0, MAX_DISPLAY_COURSES)
+                : [];
+
+            window.downloadedPublicCourses = sorted;
 
             const badge = document.getElementById('public-badge');
-            if (badge) badge.innerText = courses.length;
+            if (badge) badge.innerText = sorted.length;
 
             renderPublicCoursesList();
         }
 
-        function updatePeerCountUI() {
-            const countText = document.getElementById('p2p-count-text');
-            const dot = document.getElementById('p2p-dot');
-            if (countText) {
-                const count = p2pConnections.length;
-                if (count > 0) {
-                    countText.innerText = `P2P: ${count} ピア`;
-                    if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
-                } else {
-                    countText.innerText = myPeerId ? `P2P待機中 (${myPeerId.replace(ROOM_PREFIX, 'スロット')})` : `ローカル同期`;
-                    if (dot) dot.className = "w-2 h-2 rounded-full bg-amber-500";
+        function setFirebaseError(message) {
+            console.error('[Firebase]', message);
+            setFirebaseStatus('Firebase: エラー', 'red');
+            showToast(message, '❌');
+        }
+
+        function getDatabaseReference() {
+            if (!db) throw new Error('Realtime Databaseが初期化されていません。');
+            return ref(db, 'courses');
+        }
+
+        async function initializeFirebaseDatabase() {
+            try {
+                // databaseURLを設定していない場合は通常の初期化を試す。
+                db = getDatabase(app);
+
+                setFirebaseStatus('Firebase: 認証中...', 'amber');
+
+                if (!auth.currentUser) {
+                    await signInAnonymously(auth);
                 }
+
+                firebaseUser = auth.currentUser;
+
+                if (!firebaseUser) {
+                    throw new Error('匿名認証ユーザーを取得できませんでした。');
+                }
+
+                firebaseReady = true;
+                firebaseReadyResolve(firebaseUser);
+
+                setFirebaseStatus('Firebase: 接続済み', 'green');
+
+                // Firebaseを唯一の公開コース一覧としてリアルタイム監視
+                onValue(
+                    getDatabaseReference(),
+                    snapshot => {
+                        const value = snapshot.val() || {};
+                        const courses = Object.entries(value).map(([key, course]) => ({
+                            ...(course || {}),
+                            id: (course && course.id) ? course.id : key
+                        }));
+
+                        saveCachedCourses(courses);
+                        updateCoursesUI(courses);
+
+                        setFirebaseStatus(
+                            `Firebase: 接続済み (${courses.length})`,
+                            'green'
+                        );
+                    },
+                    error => {
+                        console.error('[Firebase onValue]', error);
+                        // Firebaseが読めない場合だけローカルキャッシュを表示
+                        const cached = getCachedCourses();
+                        updateCoursesUI(cached);
+                        setFirebaseStatus('Firebase: 読み込みエラー', 'red');
+                    }
+                );
+
+            } catch (error) {
+                console.error('[Firebase init]', error);
+
+                firebaseReadyReject(error);
+
+                // テスト中にDB URLなどが未設定でも、ゲーム本体は起動できるようにする
+                const cached = getCachedCourses();
+                updateCoursesUI(cached);
+
+                setFirebaseStatus('Firebase: 未接続', 'red');
+
+                showToast(
+                    'Firebase接続に失敗しました。Realtime DatabaseのURLや匿名認証を確認してください。',
+                    '⚠️'
+                );
             }
         }
 
-        let broadcastChan = null;
-        try {
-            if (typeof BroadcastChannel !== 'undefined') {
-                broadcastChan = new BroadcastChannel('m_p2p_channel');
-                broadcastChan.onmessage = (event) => {
-                    if (event.data) handleIncomingMessage(event.data);
-                };
-            }
-        } catch(e) {}
+        // Firebase Authenticationの状態を監視
+        onAuthStateChanged(auth, user => {
+            firebaseUser = user || null;
 
-        window.addEventListener('storage', (e) => {
-            if (e.key === 'm_p2p_broadcast_event' && e.newValue) {
-                try {
-                    const data = JSON.parse(e.newValue);
-                    handleIncomingMessage(data);
-                } catch(err) {}
+            if (user) {
+                console.log('[Firebase] Anonymous UID:', user.uid);
+                setFirebaseStatus('Firebase: 認証済み', 'green');
             }
         });
 
-        function broadcastLocal(data) {
-            if (broadcastChan) {
-                try { broadcastChan.postMessage(data); } catch(e){}
-            }
-            try {
-                localStorage.setItem('m_p2p_broadcast_event', JSON.stringify({ ...data, _ts: Date.now() }));
-            } catch(e){}
-        }
-
-        function handleIncomingMessage(data, senderConn = null) {
-            if (!data) return;
-
-            if (data.type === 'SYNC_COURSES') {
-                const updated = mergeIncomingCourses(data.courses);
-                if (updated && senderConn && senderConn.open) {
-                    try {
-                        senderConn.send({
-                            type: 'SYNC_COURSES_REPLY',
-                            courses: getLocalPublicCourses()
-                        });
-                    } catch(e) {}
-                }
-            } else if (data.type === 'SYNC_COURSES_REPLY') {
-                mergeIncomingCourses(data.courses);
-            } else if (data.type === 'NEW_COURSE') {
-                mergeIncomingCourses([data.course]);
-                // Gossip protocol: Relay to other connected peers
-                p2pConnections.forEach(c => {
-                    if (c !== senderConn && c.open) {
-                        try { c.send(data); } catch(e){}
-                    }
-                });
-            } else if (data.type === 'LIKE_COURSE') {
-                const local = getLocalPublicCourses();
-                const target = local.find(c => c.id === data.courseId);
-                if (target) {
-                    target.likes = (target.likes || 0) + 1;
-                    const pruned = pruneCourses(local);
-                    saveLocalPublicCourses(pruned);
-                    updateCoursesUI(pruned);
-                }
-                p2pConnections.forEach(c => {
-                    if (c !== senderConn && c.open) {
-                        try { c.send(data); } catch(e){}
-                    }
-                });
-            }
-        }
-
-        function tryInitPeer(slotIndex = 0) {
-            const pruned = pruneCourses(getLocalPublicCourses());
-            saveLocalPublicCourses(pruned);
-            updateCoursesUI(pruned);
-
-            if (typeof Peer === 'undefined') {
-                updatePeerCountUI();
-                return;
-            }
-
-            let targetId = '';
-            if (slotIndex < NUM_ROOM_SLOTS) {
-                targetId = ROOM_PREFIX + slotIndex;
-            } else {
-                targetId = 'm_peer_' + Math.random().toString(36).substr(2, 9);
-            }
-
-            try {
-                if (peer && !peer.destroyed) {
-                    peer.destroy();
-                }
-            } catch(e) {}
-
-            try {
-                peer = new Peer(targetId, { debug: 0 });
-
-                peer.on('open', (id) => {
-                    myPeerId = id;
-                    console.log('P2P ID Registered:', id);
-                    connectToAllSlots();
-                    updatePeerCountUI();
-                });
-
-                peer.on('error', (err) => {
-                    if (err.type === 'unavailable-id' && slotIndex < NUM_ROOM_SLOTS) {
-                        // Slot occupied, try next room slot
-                        tryInitPeer(slotIndex + 1);
-                    } else {
-                        console.warn('P2P connection info:', err ? err.message : err);
-                        updatePeerCountUI();
-                    }
-                });
-
-                peer.on('connection', (conn) => {
-                    setupConnection(conn);
-                });
-            } catch (e) {
-                console.warn('PeerJS initialization fallback to local channel sync.', e);
-                updatePeerCountUI();
-            }
-        }
-
-        function connectToAllSlots() {
-            for (let i = 0; i < NUM_ROOM_SLOTS; i++) {
-                const targetId = ROOM_PREFIX + i;
-                if (targetId !== myPeerId) {
-                    connectToPeer(targetId);
-                }
-            }
-        }
-
-        function connectToPeer(targetId) {
-            if (!peer || peer.destroyed || !peer.open) return;
-            const alreadyConnected = p2pConnections.some(c => c.peer === targetId);
-            if (alreadyConnected) return;
-
-            try {
-                const conn = peer.connect(targetId, { reliable: true });
-                if (conn) setupConnection(conn);
-            } catch(e) {}
-        }
-
-        function setupConnection(conn) {
-            if (!conn) return;
-
-            conn.on('open', () => {
-                if (!p2pConnections.some(c => c.peer === conn.peer)) {
-                    p2pConnections.push(conn);
-                    updatePeerCountUI();
-                }
-                try {
-                    conn.send({
-                        type: 'SYNC_COURSES',
-                        courses: getLocalPublicCourses()
-                    });
-                } catch(e) {}
-            });
-
-            conn.on('data', (data) => {
-                handleIncomingMessage(data, conn);
-            });
-
-            const cleanup = () => {
-                p2pConnections = p2pConnections.filter(c => c !== conn && c.peer !== conn.peer);
-                updatePeerCountUI();
-            };
-
-            conn.on('close', cleanup);
-            conn.on('error', cleanup);
-        }
-
-        window.manualP2pSync = function() {
-            showToast("P2P再接続・コース同期を実行中...", "🔄");
-            connectToAllSlots();
-            broadcastLocal({
-                type: 'SYNC_COURSES',
-                courses: getLocalPublicCourses()
-            });
-            setTimeout(() => {
-                const pruned = pruneCourses(getLocalPublicCourses());
-                saveLocalPublicCourses(pruned);
-                updateCoursesUI(pruned);
-            }, 800);
-        };
-
+        // ------------------------------------------------------------
+        // 互換用関数
+        // 旧P2Pコードから呼ばれても壊れないように名前を残す
+        // ------------------------------------------------------------
         window.getCurrentUserId = function() {
-            return myPeerId;
+            return firebaseUser ? firebaseUser.uid : '';
         };
 
+        window.manualP2pSync = async function() {
+            // UI側の古いonclickを壊さないための互換名
+            try {
+                await firebaseReadyPromise;
+
+                setFirebaseStatus('Firebase: 更新中...', 'amber');
+
+                // onValueが常時監視しているため、ここではDBを再購読する必要はない。
+                // 手動ボタンを押したことが分かるように表示だけ更新する。
+                showToast('Firebaseからコース一覧を更新しています！', '🔄');
+
+                setTimeout(() => {
+                    setFirebaseStatus('Firebase: 接続済み', 'green');
+                }, 500);
+
+            } catch (e) {
+                setFirebaseStatus('Firebase: 未接続', 'red');
+                showToast('Firebaseに接続できていません。', '❌');
+            }
+        };
+
+        // ------------------------------------------------------------
+        // コース公開
+        // ------------------------------------------------------------
         window.submitCoursePublish = async function() {
             const titleInput = document.getElementById('publish-title');
             const authorInput = document.getElementById('publish-author');
@@ -2201,86 +1899,123 @@
 
             const title = titleInput.value.trim() || '無題のコース';
             const author = authorInput.value.trim() || '名無し';
-            const encodedData = window.encodeLevelData();
 
-            statusText.classList.remove('hidden');
+            if (statusText) statusText.classList.remove('hidden');
 
-            const courseData = {
-                id: 'course_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                title: title,
-                author: author,
-                theme: window.currentTheme || 'overworld',
-                data: encodedData,
-                likes: 0,
-                createdAt: Date.now(),
-                creatorUid: myPeerId
-            };
+            try {
+                await firebaseReadyPromise;
 
-            const localCourses = getLocalPublicCourses();
-            localCourses.push(courseData);
-            const pruned = pruneCourses(localCourses);
-            saveLocalPublicCourses(pruned);
-            updateCoursesUI(pruned);
-
-            broadcastLocal({
-                type: 'NEW_COURSE',
-                course: courseData
-            });
-
-            p2pConnections.forEach(conn => {
-                if (conn && conn.open) {
-                    try {
-                        conn.send({
-                            type: 'NEW_COURSE',
-                            course: courseData
-                        });
-                    } catch(e) {}
+                const user = auth.currentUser;
+                if (!user) {
+                    throw new Error('Firebase認証が完了していません。');
                 }
-            });
 
-            statusText.classList.add('hidden');
-            closePublishModal();
-            showToast("コースを公開・同期しました！", "🌐");
-            titleInput.value = '';
+                const encodedData = window.encodeLevelData();
+
+                // Firebase側で一意なキーを生成
+                const courseRef = push(getDatabaseReference());
+
+                const courseData = {
+                    id: courseRef.key,
+                    title: title,
+                    author: author,
+                    theme: window.currentTheme || 'overworld',
+                    data: encodedData,
+                    likes: 0,
+                    createdAt: Date.now(),
+                    creatorUid: user.uid
+                };
+
+                await set(courseRef, courseData);
+
+                // UIはonValueから自動更新される
+                closePublishModal();
+
+                if (statusText) statusText.classList.add('hidden');
+                titleInput.value = '';
+
+                showToast('Firebaseにコースを公開しました！', '☁️');
+
+            } catch (error) {
+                console.error('[Firebase publish]', error);
+
+                if (statusText) statusText.classList.add('hidden');
+
+                showToast(
+                    '公開に失敗しました。Firebaseの設定・Database Rulesを確認してください。',
+                    '❌'
+                );
+            }
         };
 
+        // ------------------------------------------------------------
+        // イイネ
+        // ------------------------------------------------------------
+// ------------------------------------------------------------
+        // イイネ（1人1回まで / トグル処理）
+        // ------------------------------------------------------------
         window.likePublicCourse = async function(id) {
-            const localCourses = getLocalPublicCourses();
-            const target = localCourses.find(c => c.id === id);
-            if (target) {
-                target.likes = (target.likes || 0) + 1;
-                const pruned = pruneCourses(localCourses);
-                saveLocalPublicCourses(pruned);
-                updateCoursesUI(pruned);
+            try {
+                await firebaseReadyPromise;
 
-                broadcastLocal({
-                    type: 'LIKE_COURSE',
-                    courseId: id
-                });
+                if (!id) return;
 
-                p2pConnections.forEach(conn => {
-                    if (conn && conn.open) {
-                        try {
-                            conn.send({
-                                type: 'LIKE_COURSE',
-                                courseId: id
-                            });
-                        } catch(e) {}
+                // 1. ログイン中のユーザーIDを取得
+                const user = auth.currentUser;
+                if (!user) {
+                    showToast('ログイン準備中です。少し待ってお試しください。', '⚠️');
+                    return;
+                }
+                const uid = user.uid;
+
+                // 2. コース全体の参照を取得
+                const courseRef = ref(db, `courses/${id}`);
+
+                let isLikedNow = false;
+
+                // 3. トランザクション処理
+                await runTransaction(courseRef, course => {
+                    if (course) {
+                        if (!course.likedBy) {
+                            course.likedBy = {};
+                        }
+
+                        if (course.likedBy[uid]) {
+                            // 【イイネ解除】ID削除 & 件数 -1
+                            delete course.likedBy[uid];
+                            course.likes = Math.max(0, (Number(course.likes) || 1) - 1);
+                            isLikedNow = false;
+                        } else {
+                            // 【イイネ追加】ID記録 & 件数 +1
+                            course.likedBy[uid] = true;
+                            course.likes = (Number(course.likes) || 0) + 1;
+                            isLikedNow = true;
+                        }
                     }
+                    return course;
                 });
 
-                showToast("イイネを送信しました！", "❤️");
+                // 4. 結果に合わせてトースト通知を変更
+                if (isLikedNow) {
+                    showToast('イイネを送信しました！', '❤️');
+                } else {
+                    showToast('イイネを取り消しました。', '🤍');
+                }
+
+            } catch (error) {
+                console.error('[Firebase like]', error);
+                showToast(
+                    'イイネの送信に失敗しました。',
+                    '❌'
+                );
             }
         };
+        // ------------------------------------------------------------
+        // 起動
+        // ------------------------------------------------------------
+        updateCoursesUI(getCachedCourses());
+        initializeFirebaseDatabase();
 
-        // 定期的な再接続と同期 (15秒ごと)
-        setInterval(() => {
-            if (peer && peer.open) {
-                connectToAllSlots();
-            }
-        }, 15000);
-
-        tryInitPeer(0);
     </script>
 </body>
 </html>
