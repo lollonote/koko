@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Super Pixel M Maker Pro</title>
+    <title>Block Maker Studio</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -50,7 +50,7 @@
                 M
             </div>
             <div>
-                <h1 class="font-pixel text-xs md:text-sm text-yellow-400 tracking-wider">PIXEL M MAKER <span class="text-red-500"></span></h1>
+                <h1 class="font-pixel text-xs md:text-sm text-yellow-400 tracking-wider">Block Maker Studio <span class="text-red-500"></span></h1>
                 <p class="text-[10px] text-slate-400">つくって、あそぶ！ 8-Bit Pixel Level Builder</p>
             </div>
         </div>
@@ -106,7 +106,7 @@
                 <div class="flex items-center gap-4">
                     <span id="hud-score">SCORE: 00000</span>
                     <span id="hud-coins" class="text-yellow-300">🪙 x00</span>
-                    <span id="hud-power" class="text-red-400">M [SMALL]</span>
+                    <span id="hud-power" class="text-red-400"> [SMALL]</span>
                 </div>
                 <div id="hud-status" class="text-yellow-400 bg-slate-900/80 px-2.5 py-1 rounded border border-slate-600">PLAYING</div>
             </div>
@@ -204,7 +204,7 @@
                     <button onclick="closePublicBrowserModal()" class="text-slate-400 hover:text-white font-bold text-sm px-2">✕</button>
                 </div>
             </div>
-            <p class="text-xs text-slate-400">他プレイヤーが公開したコースです。</p>
+            <p class="text-xs text-slate-400">他プレイヤーが公開したコース（最大50個を自動保持・入れ替え）です。</p>
             
             <div id="public-courses-list" class="flex flex-col gap-2 overflow-y-auto max-h-[55vh] pr-1">
                 <!-- Populated dynamically -->
@@ -783,7 +783,7 @@
             if (coinsEl) coinsEl.innerText = `🪙 x${String(coins).padStart(2, '0')}`;
             if (powerEl) {
                 const pNames = ['M [SMALL]', 'SUPER [BIG]', 'FIRE [FLOWER]'];
-                powerEl.innerText = pNames[player.powerState] || 'M';
+                powerEl.innerText = pNames[player.powerState] || '';
             }
             if (statusEl) statusEl.innerText = gameState;
         }
